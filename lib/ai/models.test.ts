@@ -1,81 +1,43 @@
-import { simulateReadableStream } from "ai";
-import { MockLanguageModelV3 } from "ai/test";
-import { getResponseChunksByPrompt } from "@/tests/prompts/utils";
+import { describe, it, expect } from 'vitest';
+import { chatModels, DEFAULT_CHAT_MODEL, modelsByProvider } from './models';
 
-const mockUsage = {
-  inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
-  outputTokens: { total: 20, text: 20, reasoning: 0 },
-};
+describe('Privy Chat Models', () => {
+  describe('DEFAULT_CHAT_MODEL', () => {
+    it('should be the Fireworks gemma model', () => {
+      expect(DEFAULT_CHAT_MODEL).toBe('accounts/fireworks/models/gemma-3-4b-it');
+    });
+  });
 
-export const chatModel = new MockLanguageModelV3({
-  doGenerate: async () => ({
-    finishReason: "stop",
-    usage: mockUsage,
-    content: [{ type: "text", text: "Hello, world!" }],
-    warnings: [],
-  }),
-  doStream: async ({ prompt }) => ({
-    stream: simulateReadableStream({
-      chunkDelayInMs: 500,
-      initialDelayInMs: 1000,
-      chunks: getResponseChunksByPrompt(prompt),
-    }),
-  }),
-});
+  describe('chatModels', () => {
+    it('should have at least one model', () => {
+      expect(chatModels.length).toBeGreaterThan(0);
+    });
 
-export const reasoningModel = new MockLanguageModelV3({
-  doGenerate: async () => ({
-    finishReason: "stop",
-    usage: mockUsage,
-    content: [{ type: "text", text: "Hello, world!" }],
-    warnings: [],
-  }),
-  doStream: async ({ prompt }) => ({
-    stream: simulateReadableStream({
-      chunkDelayInMs: 500,
-      initialDelayInMs: 1000,
-      chunks: getResponseChunksByPrompt(prompt, true),
-    }),
-  }),
-});
+    it('should include the Privy Coach model', () => {
+      const privyModel = chatModels.find(m => m.name === 'Privy Coach');
+      expect(privyModel).toBeDefined();
+      expect(privyModel?.provider).toBe('fireworks');
+    });
 
-export const titleModel = new MockLanguageModelV3({
-  doGenerate: async () => ({
-    finishReason: "stop",
-    usage: mockUsage,
-    content: [{ type: "text", text: "This is a test title" }],
-    warnings: [],
-  }),
-  doStream: async () => ({
-    stream: simulateReadableStream({
-      chunkDelayInMs: 500,
-      initialDelayInMs: 1000,
-      chunks: [
-        { id: "1", type: "text-start" },
-        { id: "1", type: "text-delta", delta: "This is a test title" },
-        { id: "1", type: "text-end" },
-        {
-          type: "finish",
-          finishReason: "stop",
-          usage: mockUsage,
-        },
-      ],
-    }),
-  }),
-});
+    it('all models should have required fields', () => {
+      chatModels.forEach((model) => {
+        expect(model.id).toBeDefined();
+        expect(model.name).toBeDefined();
+        expect(model.provider).toBeDefined();
+        expect(model.description).toBeDefined();
+      });
+    });
+  });
 
-export const artifactModel = new MockLanguageModelV3({
-  doGenerate: async () => ({
-    finishReason: "stop",
-    usage: mockUsage,
-    content: [{ type: "text", text: "Hello, world!" }],
-    warnings: [],
-  }),
-  doStream: async ({ prompt }) => ({
-    stream: simulateReadableStream({
-      chunkDelayInMs: 50,
-      initialDelayInMs: 100,
-      chunks: getResponseChunksByPrompt(prompt),
-    }),
-  }),
+  describe('modelsByProvider', () => {
+    it('should group models by provider', () => {
+      expect(modelsByProvider).toBeDefined();
+      expect(typeof modelsByProvider).toBe('object');
+    });
+
+    it('should have fireworks provider', () => {
+      expect(modelsByProvider['fireworks']).toBeDefined();
+      expect(modelsByProvider['fireworks'].length).toBeGreaterThan(0);
+    });
+  });
 });
