@@ -13,6 +13,12 @@ const runMigrate = async () => {
     process.exit(0);
   }
 
+  // Skip migrations during Vercel build - tables are managed via db:push
+  if (process.env.VERCEL) {
+    console.log("⏭️  Skipping migrations on Vercel (use db:push locally)");
+    process.exit(0);
+  }
+
   const connection = postgres(process.env.POSTGRES_URL, { max: 1 });
   const db = drizzle(connection);
 

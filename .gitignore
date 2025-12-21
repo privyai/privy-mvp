@@ -43,3 +43,4 @@ drizzle/*.sql-journal
 # Misc
 *.pem
 *.log
+.env*.local
