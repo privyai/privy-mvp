@@ -15,10 +15,10 @@ type SuggestedActionsProps = {
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const suggestedActions = [
-    "What are the advantages of using Next.js?",
-    "Write code to demonstrate Dijkstra's algorithm",
-    "Help me write an essay about Silicon Valley",
-    "What is the weather in San Francisco?",
+    "I need to vent about a frustrating situation at work...",
+    "Help me decide between two career options I'm considering",
+    "I'm stuck in negative thinking about a recent failure",
+    "I want to reframe how I see a challenging relationship",
   ];
 
   return (
