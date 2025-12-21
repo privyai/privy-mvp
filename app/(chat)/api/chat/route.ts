@@ -38,6 +38,7 @@ import type { ChatMessage } from "@/lib/types";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
+import { logfire, logRateLimitCheck, logError } from "@/lib/observability/logfire";
 
 export const maxDuration = 60;
 
@@ -90,7 +91,18 @@ export async function POST(request: Request) {
       differenceInHours: 24,
     });
 
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
+    const maxMessages = entitlementsByUserType[userType].maxMessagesPerDay;
+    const isAllowed = messageCount <= maxMessages;
+
+    // Log rate limit check to Logfire
+    logRateLimitCheck({
+      userId: session.user.id,
+      messageCount,
+      limit: maxMessages,
+      allowed: isAllowed,
+    });
+
+    if (!isAllowed) {
       return new ChatSDKError("rate_limit:chat").toResponse();
     }
 
@@ -179,20 +191,20 @@ export async function POST(request: Request) {
           experimental_activeTools: isReasoningModel
             ? []
             : [
-                "getWeather",
-                "createDocument",
-                "updateDocument",
-                "requestSuggestions",
-              ],
+              "getWeather",
+              "createDocument",
+              "updateDocument",
+              "requestSuggestions",
+            ],
           experimental_transform: isReasoningModel
             ? undefined
             : smoothStream({ chunking: "word" }),
           providerOptions: isReasoningModel
             ? {
-                anthropic: {
-                  thinking: { type: "enabled", budgetTokens: 10_000 },
-                },
-              }
+              anthropic: {
+                thinking: { type: "enabled", budgetTokens: 10_000 },
+              },
+            }
             : undefined,
           tools: {
             getWeather,
