@@ -5,11 +5,11 @@ const fireworks = createFireworks({
   apiKey: process.env.FIREWORKS_API_KEY ?? "",
 });
 
-// Default model for Privy coaching - Gemma 3 4B (user confirmed working)
-const PRIVY_MODEL = "accounts/fireworks/models/gemma-3-4b-it";
+// Privy's deployed Gemma 3 4B model on Fireworks
+const PRIVY_MODEL = "accounts/pari2798-c02e30/deployedModels/gemma-3-4b-it-gfd37w0q";
 
 export function getLanguageModel(modelId?: string) {
-  // Always use Privy's coaching model
+  // Always use Privy's deployed model
   return fireworks(PRIVY_MODEL);
 }
 

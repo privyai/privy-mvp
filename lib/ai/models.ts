@@ -1,5 +1,5 @@
-// Privy uses a single optimized model for coaching
-export const DEFAULT_CHAT_MODEL = "accounts/fireworks/models/gemma-3-4b-it";
+// Privy uses a custom deployed model for coaching
+export const DEFAULT_CHAT_MODEL = "accounts/pari2798-c02e30/deployedModels/gemma-3-4b-it-gfd37w0q";
 
 export type ChatModel = {
   id: string;
@@ -11,10 +11,10 @@ export type ChatModel = {
 // Simplified model list for Privy - just one optimized model
 export const chatModels: ChatModel[] = [
   {
-    id: "accounts/fireworks/models/gemma-3-4b-it",
+    id: "accounts/pari2798-c02e30/deployedModels/gemma-3-4b-it-gfd37w0q",
     name: "Privy Coach",
     provider: "fireworks",
-    description: "Gemma 3 4B - Fast and private coaching",
+    description: "Gemma 3 4B - Custom deployed for Privy",
   },
 ];
 
