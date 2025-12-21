@@ -5,8 +5,8 @@ const fireworks = createFireworks({
   apiKey: process.env.FIREWORKS_API_KEY ?? "",
 });
 
-// Default model for Privy coaching
-const PRIVY_MODEL = "accounts/fireworks/models/gemma-3-4b-it";
+// Default model for Privy coaching - Llama 3.1 8B Instruct (fast and reliable)
+const PRIVY_MODEL = "accounts/fireworks/models/llama-v3p1-8b-instruct";
 
 export function getLanguageModel(modelId?: string) {
   // Always use Privy's coaching model
