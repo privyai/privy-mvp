@@ -184,7 +184,8 @@ export async function POST(request: Request) {
           selectedChatModel.includes("thinking");
 
         const result = streamText({
-          model: getLanguageModel(selectedChatModel),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          model: getLanguageModel(selectedChatModel) as any,
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: await convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
