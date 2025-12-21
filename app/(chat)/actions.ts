@@ -23,7 +23,8 @@ export async function generateTitleFromUserMessage({
   message: UIMessage;
 }) {
   const { text: title } = await generateText({
-    model: getTitleModel(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    model: getTitleModel() as any,
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
