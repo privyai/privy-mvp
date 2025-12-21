@@ -1,9 +1,8 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createFireworks } from "@ai-sdk/fireworks";
 
-// Fireworks AI with OpenAI-compatible API
-const fireworks = createOpenAI({
-  apiKey: process.env.FIREWORKS_API_KEY,
-  baseURL: "https://api.fireworks.ai/inference/v1",
+// Fireworks AI provider (AI SDK 5 compatible)
+const fireworks = createFireworks({
+  apiKey: process.env.FIREWORKS_API_KEY ?? "",
 });
 
 // Default model for Privy coaching

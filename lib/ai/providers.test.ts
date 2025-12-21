@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock the @ai-sdk/openai module
-vi.mock('@ai-sdk/openai', () => ({
-    createOpenAI: vi.fn(() => {
+// Mock the @ai-sdk/fireworks module
+vi.mock('@ai-sdk/fireworks', () => ({
+    createFireworks: vi.fn(() => {
         return vi.fn((modelId: string) => ({
             modelId,
             provider: 'fireworks',
