@@ -188,6 +188,8 @@ export async function POST(request: Request) {
           model: getLanguageModel(selectedChatModel) as any,
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: await convertToModelMessages(uiMessages),
+          temperature: 0.45,
+          maxTokens: 250,
           stopWhen: stepCountIs(5),
           experimental_activeTools: isReasoningModel
             ? []
