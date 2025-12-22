@@ -802,6 +802,23 @@ export const PlusIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
+export const FlameIcon = ({ size = 16 }: { size?: number }) => (
+  <svg
+    height={size}
+    strokeLinejoin="round"
+    style={{ color: "currentcolor" }}
+    viewBox="0 0 16 16"
+    width={size}
+  >
+    <path
+      clipRule="evenodd"
+      d="M7.5 0.5C7.5 0.5 8 2 8 3.5C8 5 6.5 6 6.5 6C6.5 6 6 4.5 6 3.5C4.5 4.5 3 6.5 3 9C3 12 5.5 14.5 8 14.5C10.5 14.5 13 12 13 9C13 5 10 2.5 7.5 0.5ZM8 13C6.5 13 5 11.5 5 10C5 8.5 6 7.5 6.5 7C7 8 8 8.5 8.5 8.5C9 8.5 10.5 7.5 10.5 10C10.5 11.5 9.5 13 8 13Z"
+      fill="currentColor"
+      fillRule="evenodd"
+    />
+  </svg>
+);
+
 export const CopyIcon = ({ size = 16 }: { size?: number }) => (
   <svg
     height={size}
