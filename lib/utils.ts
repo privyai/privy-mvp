@@ -15,8 +15,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Get token from localStorage for authenticated requests
+ */
+function getTokenFromStorage(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('privy_access_token');
+}
+
+/**
+ * Get headers with authentication token
+ */
+function getAuthHeaders(): Record<string, string> {
+  const token = getTokenFromStorage();
+  if (!token) return {};
+  return { 'x-privy-token': token };
+}
+
 export const fetcher = async (url: string) => {
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     const { code, cause } = await response.json();
@@ -31,7 +50,16 @@ export async function fetchWithErrorHandlers(
   init?: RequestInit,
 ) {
   try {
-    const response = await fetch(input, init);
+    const headers = new Headers(init?.headers);
+    const authHeaders = getAuthHeaders();
+    for (const [key, value] of Object.entries(authHeaders)) {
+      headers.set(key, value);
+    }
+
+    const response = await fetch(input, {
+      ...init,
+      headers,
+    });
 
     if (!response.ok) {
       const { code, cause } = await response.json();
@@ -111,6 +139,6 @@ export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
 export function getTextFromMessage(message: ChatMessage | UIMessage): string {
   return message.parts
     .filter((part) => part.type === 'text')
-    .map((part) => (part as { type: 'text'; text: string}).text)
+    .map((part) => (part as { type: 'text'; text: string }).text)
     .join('');
 }

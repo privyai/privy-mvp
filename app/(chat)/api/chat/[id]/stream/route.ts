@@ -1,6 +1,6 @@
 import { createUIMessageStream, JsonToSseTransformStream } from "ai";
 import { differenceInSeconds } from "date-fns";
-import { auth } from "@/app/(auth)/auth";
+import { authenticateToken } from "@/lib/auth/token-auth";
 import {
   getChatById,
   getMessagesByChatId,
@@ -12,7 +12,7 @@ import type { ChatMessage } from "@/lib/types";
 import { getStreamContext } from "../../route";
 
 export async function GET(
-  _: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: chatId } = await params;
@@ -28,9 +28,9 @@ export async function GET(
     return new ChatSDKError("bad_request:api").toResponse();
   }
 
-  const session = await auth();
+  const user = await authenticateToken(request);
 
-  if (!session?.user) {
+  if (!user) {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
@@ -46,7 +46,7 @@ export async function GET(
     return new ChatSDKError("not_found:chat").toResponse();
   }
 
-  if (chat.visibility === "private" && chat.userId !== session.user.id) {
+  if (chat.visibility === "private" && chat.userId !== user.id) {
     return new ChatSDKError("forbidden:chat").toResponse();
   }
 
@@ -64,7 +64,7 @@ export async function GET(
 
   const emptyDataStream = createUIMessageStream<ChatMessage>({
     // biome-ignore lint/suspicious/noEmptyBlockStatements: "Needs to exist"
-    execute: () => {},
+    execute: () => { },
   });
 
   const stream = await streamContext.resumableStream(recentStreamId, () =>
