@@ -1,5 +1,5 @@
-// Privy uses a custom deployed model for coaching
-export const DEFAULT_CHAT_MODEL = "accounts/pari2798-c02e30/deployedModels/gemma-3-4b-it-gfd37w0q";
+// Privy uses DeepSeek V3.2 for superior reasoning
+export const DEFAULT_CHAT_MODEL = "accounts/fireworks/models/deepseek-v3p2";
 
 export type ChatModel = {
   id: string;
@@ -8,13 +8,13 @@ export type ChatModel = {
   description: string;
 };
 
-// Simplified model list for Privy - just one optimized model
+// Simplified model list for Privy - DeepSeek V3.2
 export const chatModels: ChatModel[] = [
   {
-    id: "accounts/pari2798-c02e30/deployedModels/gemma-3-4b-it-gfd37w0q",
+    id: "accounts/fireworks/models/deepseek-v3p2",
     name: "Privy Coach",
     provider: "fireworks",
-    description: "Gemma 3 4B - Custom deployed for Privy",
+    description: "DeepSeek V3.2 - Superior reasoning, 160k context",
   },
 ];
 
