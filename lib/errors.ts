@@ -16,6 +16,7 @@ export type Surface =
   | "vote"
   | "document"
   | "suggestions"
+  | "user"
   | "activate_gateway";
 
 export type ErrorCode = `${ErrorType}:${Surface}`;
@@ -32,6 +33,7 @@ export const visibilityBySurface: Record<Surface, ErrorVisibility> = {
   vote: "response",
   document: "response",
   suggestions: "response",
+  user: "response",
   activate_gateway: "response",
 };
 

@@ -13,8 +13,14 @@ import {
 
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 64 }).notNull(),
+  // Legacy fields (for backward compatibility)
+  email: varchar("email", { length: 64 }),
   password: varchar("password", { length: 64 }),
+  // Zero-trust token auth (new approach)
+  tokenHash: varchar("tokenHash", { length: 64 }).unique(),
+  // Metadata
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  lastActiveAt: timestamp("lastActiveAt"),
 });
 
 export type User = InferSelectModel<typeof user>;
