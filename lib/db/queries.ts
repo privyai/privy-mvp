@@ -79,6 +79,101 @@ export async function createGuestUser() {
   }
 }
 
+// ============================================
+// Zero-Trust Token Authentication Functions
+// ============================================
+
+/**
+ * Get user by token hash
+ */
+export async function getUserByTokenHash(
+  tokenHash: string
+): Promise<User | null> {
+  try {
+    const users = await db
+      .select()
+      .from(user)
+      .where(eq(user.tokenHash, tokenHash));
+    return users[0] || null;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user by token hash"
+    );
+  }
+}
+
+/**
+ * Create a new user with token-based authentication
+ */
+export async function createTokenUser(tokenHash: string): Promise<User> {
+  try {
+    const [newUser] = await db
+      .insert(user)
+      .values({
+        tokenHash,
+        email: null, // No email for token-based users
+        password: null, // No password for token-based users
+        createdAt: new Date(),
+        lastActiveAt: new Date(),
+      })
+      .returning();
+
+    return newUser;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to create token user"
+    );
+  }
+}
+
+/**
+ * Get or create user by token hash (idempotent)
+ */
+export async function getOrCreateTokenUser(tokenHash: string): Promise<User> {
+  // Try to find existing user
+  const existingUser = await getUserByTokenHash(tokenHash);
+
+  if (existingUser) {
+    // Update last active timestamp
+    await db
+      .update(user)
+      .set({ lastActiveAt: new Date() })
+      .where(eq(user.id, existingUser.id));
+
+    return existingUser;
+  }
+
+  // Create new user
+  return await createTokenUser(tokenHash);
+}
+
+/**
+ * Delete user and all associated data by token hash
+ * This is for the "burn" functionality
+ */
+export async function burnUserByTokenHash(tokenHash: string): Promise<void> {
+  try {
+    const userToBurn = await getUserByTokenHash(tokenHash);
+
+    if (!userToBurn) {
+      throw new ChatSDKError("not_found:user", "User not found");
+    }
+
+    // Delete all user's chats (this cascades to messages, votes, etc.)
+    await deleteAllChatsByUserId({ userId: userToBurn.id });
+
+    // Delete user
+    await db.delete(user).where(eq(user.id, userToBurn.id));
+  } catch (error) {
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError("bad_request:database", "Failed to burn user");
+  }
+}
+
 export async function saveChat({
   id,
   userId,
