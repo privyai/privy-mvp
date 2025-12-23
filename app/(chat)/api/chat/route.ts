@@ -203,13 +203,13 @@ export async function POST(request: Request) {
           experimental_transform: isReasoningModel
             ? undefined
             : smoothStream({ chunking: "word" }),
-          providerOptions: isReasoningModel
-            ? {
-              anthropic: {
-                thinking: { type: "enabled", budgetTokens: 10_000 },
-              },
-            }
-            : undefined,
+          providerOptions: {
+            // Fireworks: Control reasoning mode for GLM-4.7/DeepSeek
+            // 'none' = fast streaming, 'medium' = deeper thinking (slower, buffered)
+            fireworks: {
+              reasoning_effort: "none", // Fast streaming mode by default
+            },
+          },
           tools: {
             getWeather,
             createDocument: createDocument({
