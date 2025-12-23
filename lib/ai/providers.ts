@@ -5,9 +5,9 @@ const fireworks = createFireworks({
   apiKey: process.env.FIREWORKS_API_KEY ?? "",
 });
 
-// Llama 3.3 70B Instruct - reliable streaming, excellent for coaching
-// Note: DeepSeek V3.2 was causing streaming issues (outputs reasoning_content instead of content)
-const DEFAULT_MODEL = "accounts/fireworks/models/llama-v3p3-70b-instruct";
+// GLM-4.7: 352B MoE, 198k context, optimized for reasoning and agentic workflows
+// Note: This model outputs reasoning_content (chain-of-thought) which streams properly
+const DEFAULT_MODEL = "accounts/fireworks/models/glm-4p7";
 
 // Note: Return type is `any` to work around @ai-sdk/provider version mismatch
 // between @ai-sdk/fireworks (3.0.0-beta) and ai package (2.0.0)
@@ -25,3 +25,4 @@ export function getTitleModel(): any {
 export function getArtifactModel(): any {
   return fireworks(DEFAULT_MODEL);
 }
+

@@ -1,5 +1,5 @@
-// Privy uses Llama 3.3 70B Instruct for reliable streaming
-export const DEFAULT_CHAT_MODEL = "accounts/fireworks/models/llama-v3p3-70b-instruct";
+// Privy uses GLM-4.7 for superior reasoning (352B MoE, 198k context)
+export const DEFAULT_CHAT_MODEL = "accounts/fireworks/models/glm-4p7";
 
 export type ChatModel = {
   id: string;
@@ -8,13 +8,13 @@ export type ChatModel = {
   description: string;
 };
 
-// Simplified model list for Privy - Llama 3.3 70B
+// Simplified model list for Privy - GLM-4.7
 export const chatModels: ChatModel[] = [
   {
-    id: "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    id: "accounts/fireworks/models/glm-4p7",
     name: "Privy Coach",
     provider: "fireworks",
-    description: "Llama 3.3 70B - Fast streaming, excellent for coaching",
+    description: "GLM-4.7 - 352B MoE, 198k context, advanced reasoning",
   },
 ];
 

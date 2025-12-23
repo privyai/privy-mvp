@@ -177,12 +177,13 @@ export async function POST(request: Request) {
           });
         }
 
-        // DeepSeek V3 models have built-in reasoning (output reasoning_content)
+        // Models that output reasoning_content instead of content
         const isReasoningModel =
           selectedChatModel.includes("reasoning") ||
           selectedChatModel.includes("thinking") ||
           selectedChatModel.includes("deepseek-v3") ||
-          selectedChatModel.includes("deepseek-r1");
+          selectedChatModel.includes("deepseek-r1") ||
+          selectedChatModel.includes("glm-4");
 
         const result = streamText({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
