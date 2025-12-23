@@ -5,6 +5,7 @@
 
 const TOKEN_STORAGE_KEY = "privy_access_token";
 const TOKEN_SEEN_KEY = "privy_token_seen"; // Has user seen their token?
+const TOKEN_EXISTS_KEY = "privy_has_token"; // Persistent flag in localStorage
 
 /**
  * Generate a cryptographically secure token in the browser
@@ -18,28 +19,31 @@ export function generateTokenClient(): string {
 }
 
 /**
- * Store token in localStorage
+ * Store token in sessionStorage (clears on browser close)
  */
 export function storeToken(token: string): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+  // Mark in localStorage that user has a token (persists across sessions)
+  localStorage.setItem(TOKEN_EXISTS_KEY, "true");
 }
 
 /**
- * Retrieve token from localStorage
+ * Retrieve token from sessionStorage
  */
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
+  return sessionStorage.getItem(TOKEN_STORAGE_KEY);
 }
 
 /**
- * Clear token from localStorage (burn/logout)
+ * Clear token from sessionStorage and localStorage (burn/logout)
  */
 export function clearToken(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY);
   localStorage.removeItem(TOKEN_SEEN_KEY);
+  localStorage.removeItem(TOKEN_EXISTS_KEY);
 }
 
 /**
@@ -48,6 +52,14 @@ export function clearToken(): void {
 export function hasSeenToken(): boolean {
   if (typeof window === "undefined") return false;
   return localStorage.getItem(TOKEN_SEEN_KEY) === "true";
+}
+
+/**
+ * Check if user is a returning user (has created a token before)
+ */
+export function isReturningUser(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(TOKEN_EXISTS_KEY) === "true";
 }
 
 /**

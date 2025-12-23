@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  getOrCreateToken,
+  generateTokenClient,
   getStoredToken,
   storeToken,
   clearToken,
@@ -11,28 +11,41 @@ import {
   copyTokenToClipboard,
   downloadTokenAsFile,
   importToken as importTokenUtil,
+  isReturningUser,
 } from "@/lib/auth/token-client";
 
 export function useToken() {
   const [token, setToken] = useState<string | null>(null);
   const [hasToken, setHasToken] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(false);
+  const [needsImport, setNeedsImport] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get or create token on mount
+    // Check for token in sessionStorage
     const storedToken = getStoredToken();
+    const returning = isReturningUser();
 
     if (storedToken) {
+      // Token exists in current session - use it
       setToken(storedToken);
       setHasToken(true);
       setIsFirstTime(false);
+      setNeedsImport(false);
+    } else if (returning) {
+      // Returning user, new session - needs to import token
+      setToken(null);
+      setHasToken(false);
+      setIsFirstTime(false);
+      setNeedsImport(true);
     } else {
       // First time user - generate new token
-      const newToken = getOrCreateToken();
+      const newToken = generateTokenClient();
+      storeToken(newToken);
       setToken(newToken);
       setHasToken(true);
-      setIsFirstTime(!hasSeenToken());
+      setIsFirstTime(true);
+      setNeedsImport(false);
     }
 
     setIsLoading(false);
@@ -80,6 +93,7 @@ export function useToken() {
     token,
     hasToken,
     isFirstTime,
+    needsImport,
     isLoading,
     acknowledgeToken,
     copyToken,

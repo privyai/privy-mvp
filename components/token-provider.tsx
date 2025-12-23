@@ -39,6 +39,7 @@ export function TokenProvider({ children }: TokenProviderProps) {
     token,
     hasToken,
     isFirstTime,
+    needsImport,
     isLoading,
     acknowledgeToken,
     copyToken,
@@ -146,6 +147,12 @@ export function TokenProvider({ children }: TokenProviderProps) {
               onDownload={downloadToken}
             />
           )}
+          {needsImport && (
+            <TokenImportModal
+              isOpen={needsImport}
+              onImport={importToken}
+            />
+          )}
           {children}
         </>
       )}
@@ -153,5 +160,6 @@ export function TokenProvider({ children }: TokenProviderProps) {
   );
 }
 
-// Import TokenDisplay inline to avoid circular deps
+// Import TokenDisplay and TokenImportModal inline to avoid circular deps
 import { TokenDisplay } from "@/components/token-display";
+import { TokenImportModal } from "@/components/token-import-modal";
