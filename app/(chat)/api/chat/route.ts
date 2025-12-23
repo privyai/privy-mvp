@@ -235,7 +235,7 @@ export async function POST(request: Request) {
 
         dataStream.merge(
           result.toUIMessageStream({
-            sendReasoning: false, // Disable to test streaming - reasoning was buffering
+            sendReasoning: true, // Show thinking process
           })
         );
       },
