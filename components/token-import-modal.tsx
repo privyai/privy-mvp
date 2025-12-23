@@ -47,7 +47,7 @@ export function TokenImportModal({
   const isValidLength = tokenInput.replace(/\s/g, "").length === 64;
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={() => { }}>
       <DialogContent className="sm:max-w-[600px]" hideClose>
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center">
@@ -127,7 +127,7 @@ export function TokenImportModal({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col gap-2 sm:flex-col">
           <Button
             onClick={handleImport}
             disabled={!isValidLength || isImporting}
@@ -135,6 +135,19 @@ export function TokenImportModal({
             className="w-full"
           >
             {isImporting ? "Importing..." : "Import Token & Continue"}
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={() => {
+              // Clear the returning user flag and reload to generate new token
+              localStorage.removeItem("privy_has_token");
+              localStorage.removeItem("privy_token_seen");
+              window.location.reload();
+            }}
+          >
+            Lost Token? Start Fresh
           </Button>
         </DialogFooter>
       </DialogContent>

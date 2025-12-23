@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { fetchWithErrorHandlers } from "@/lib/utils";
 import { FlameIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import {
   getChatHistoryPaginationKey,
@@ -43,7 +44,7 @@ export function AppSidebar() {
   const [showBurnDialog, setShowBurnDialog] = useState(false);
 
   const handleDeleteAll = () => {
-    const deletePromise = fetch("/api/history", {
+    const deletePromise = fetchWithErrorHandlers("/api/history", {
       method: "DELETE",
     });
 

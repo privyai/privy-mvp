@@ -1,5 +1,5 @@
-// Privy uses DeepSeek V3.2 for superior reasoning
-export const DEFAULT_CHAT_MODEL = "accounts/fireworks/models/deepseek-v3p2";
+// Privy uses Llama 3.3 70B Instruct for reliable streaming
+export const DEFAULT_CHAT_MODEL = "accounts/fireworks/models/llama-v3p3-70b-instruct";
 
 export type ChatModel = {
   id: string;
@@ -8,13 +8,13 @@ export type ChatModel = {
   description: string;
 };
 
-// Simplified model list for Privy - DeepSeek V3.2
+// Simplified model list for Privy - Llama 3.3 70B
 export const chatModels: ChatModel[] = [
   {
-    id: "accounts/fireworks/models/deepseek-v3p2",
+    id: "accounts/fireworks/models/llama-v3p3-70b-instruct",
     name: "Privy Coach",
     provider: "fireworks",
-    description: "DeepSeek V3.2 - Superior reasoning, 160k context",
+    description: "Llama 3.3 70B - Fast streaming, excellent for coaching",
   },
 ];
 
