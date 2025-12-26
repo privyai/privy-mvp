@@ -4,11 +4,11 @@
 
 **A radically private AI performance coaching platform for high-stakes leadership**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-FF6B35.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
-[![Vercel AI SDK](https://img.shields.io/badge/Vercel%20AI%20SDK-6.0-blue)](https://sdk.vercel.ai/)
+[![Privacy First](https://img.shields.io/badge/Privacy-First-FF6B35.svg)](#)
 
-[Live Demo](#) • [Documentation](#) • [Report Bug](https://github.com/privyai/privy-mvp/issues)
+[Live Demo](https://privy.ai) • [Documentation](#) • [Report Bug](https://github.com/privyai/privy-mvp/issues)
 
 </div>
 
@@ -590,7 +590,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-- **Vercel AI SDK Team**: For the incredible AI orchestration framework
 - **shadcn**: For the beautiful, accessible UI components
 - **Fireworks AI**: For fast, privacy-focused inference
 - **Open Source Community**: For the foundation we build on
