@@ -1,4 +1,3 @@
-import { geolocation } from "@vercel/functions";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -12,8 +11,8 @@ import {
   createResumableStreamContext,
   type ResumableStreamContext,
 } from "resumable-stream";
-import { auth, type UserType } from "@/app/(auth)/auth";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
+import { authenticateToken } from "@/lib/auth/token-auth";
+import { hashToken } from "@/lib/auth/token";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
@@ -78,25 +77,25 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-    const session = await auth();
+    // Zero-trust token authentication
+    const user = await authenticateToken(request);
 
-    if (!session?.user) {
+    if (!user) {
       return new ChatSDKError("unauthorized:chat").toResponse();
     }
 
-    const userType: UserType = session.user.type;
-
     const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
+      id: user.id,
       differenceInHours: 24,
     });
 
-    const maxMessages = entitlementsByUserType[userType].maxMessagesPerDay;
+    // All token users have the same rate limit (50 messages/day)
+    const maxMessages = 50;
     const isAllowed = messageCount <= maxMessages;
 
-    // Log rate limit check to Logfire
+    // Log rate limit check to Logfire (with hashed user ID for privacy)
     logRateLimitCheck({
-      userId: session.user.id,
+      userId: hashToken(user.id), // Hash user ID before logging
       messageCount,
       limit: maxMessages,
       allowed: isAllowed,
@@ -114,7 +113,7 @@ export async function POST(request: Request) {
     let titlePromise: Promise<string> | null = null;
 
     if (chat) {
-      if (chat.userId !== session.user.id) {
+      if (chat.userId !== user.id) {
         return new ChatSDKError("forbidden:chat").toResponse();
       }
       // Only fetch messages if chat already exists and not tool approval
@@ -125,7 +124,7 @@ export async function POST(request: Request) {
       // Save chat immediately with placeholder title
       await saveChat({
         id,
-        userId: session.user.id,
+        userId: user.id,
         title: "New chat",
         visibility: selectedVisibilityType,
       });
@@ -139,13 +138,12 @@ export async function POST(request: Request) {
       ? (messages as ChatMessage[])
       : [...convertToUIMessages(messagesFromDb), message as ChatMessage];
 
-    const { longitude, latitude, city, country } = geolocation(request);
-
+    // Privacy: No geolocation tracking
     const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
+      longitude: undefined,
+      latitude: undefined,
+      city: undefined,
+      country: undefined,
     };
 
     // Only save user messages to the database (not tool approval responses)
@@ -179,9 +177,13 @@ export async function POST(request: Request) {
           });
         }
 
+        // Models that output reasoning_content instead of content
         const isReasoningModel =
           selectedChatModel.includes("reasoning") ||
-          selectedChatModel.includes("thinking");
+          selectedChatModel.includes("thinking") ||
+          selectedChatModel.includes("deepseek-v3") ||
+          selectedChatModel.includes("deepseek-r1") ||
+          selectedChatModel.includes("glm-4");
 
         const result = streamText({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -201,19 +203,25 @@ export async function POST(request: Request) {
           experimental_transform: isReasoningModel
             ? undefined
             : smoothStream({ chunking: "word" }),
-          providerOptions: isReasoningModel
-            ? {
-              anthropic: {
-                thinking: { type: "enabled", budgetTokens: 10_000 },
-              },
-            }
-            : undefined,
+          providerOptions: {
+            // Fireworks: Control reasoning mode for GLM-4.7/DeepSeek
+            // 'none' = fast streaming, 'medium' = deeper thinking (slower, buffered)
+            fireworks: {
+              reasoning_effort: "none", // Fast streaming mode by default
+            },
+          },
           tools: {
             getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
+            createDocument: createDocument({
+              session: { user: { id: user.id } } as any,
+              dataStream
+            }),
+            updateDocument: updateDocument({
+              session: { user: { id: user.id } } as any,
+              dataStream
+            }),
             requestSuggestions: requestSuggestions({
-              session,
+              session: { user: { id: user.id } } as any,
               dataStream,
             }),
           },
@@ -227,7 +235,7 @@ export async function POST(request: Request) {
 
         dataStream.merge(
           result.toUIMessageStream({
-            sendReasoning: true,
+            sendReasoning: true, // Show thinking process
           })
         );
       },
@@ -325,15 +333,15 @@ export async function DELETE(request: Request) {
     return new ChatSDKError("bad_request:api").toResponse();
   }
 
-  const session = await auth();
+  const user = await authenticateToken(request);
 
-  if (!session?.user) {
+  if (!user) {
     return new ChatSDKError("unauthorized:chat").toResponse();
   }
 
   const chat = await getChatById({ id });
 
-  if (chat?.userId !== session.user.id) {
+  if (chat?.userId !== user.id) {
     return new ChatSDKError("forbidden:chat").toResponse();
   }
 

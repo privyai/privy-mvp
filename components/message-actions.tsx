@@ -5,6 +5,7 @@ import { useSWRConfig } from "swr";
 import { useCopyToClipboard } from "usehooks-ts";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
+import { fetchWithErrorHandlers } from "@/lib/utils";
 import { Action, Actions } from "./elements/actions";
 import { CopyIcon, PencilEditIcon, ThumbDownIcon, ThumbUpIcon } from "./icons";
 
@@ -77,8 +78,9 @@ export function PureMessageActions({
         data-testid="message-upvote"
         disabled={vote?.isUpvoted}
         onClick={() => {
-          const upvote = fetch("/api/vote", {
+          const upvote = fetchWithErrorHandlers("/api/vote", {
             method: "PATCH",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chatId,
               messageId: message.id,
@@ -126,8 +128,9 @@ export function PureMessageActions({
         data-testid="message-downvote"
         disabled={vote && !vote.isUpvoted}
         onClick={() => {
-          const downvote = fetch("/api/vote", {
+          const downvote = fetchWithErrorHandlers("/api/vote", {
             method: "PATCH",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chatId,
               messageId: message.id,

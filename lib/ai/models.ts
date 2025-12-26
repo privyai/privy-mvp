@@ -1,5 +1,5 @@
-// Privy uses a custom deployed model for coaching
-export const DEFAULT_CHAT_MODEL = "accounts/pari2798-c02e30/deployedModels/gemma-3-4b-it-gfd37w0q";
+// Privy uses GLM-4.7 for superior reasoning (352B MoE, 198k context)
+export const DEFAULT_CHAT_MODEL = "accounts/fireworks/models/glm-4p7";
 
 export type ChatModel = {
   id: string;
@@ -8,13 +8,13 @@ export type ChatModel = {
   description: string;
 };
 
-// Simplified model list for Privy - just one optimized model
+// Simplified model list for Privy - GLM-4.7
 export const chatModels: ChatModel[] = [
   {
-    id: "accounts/pari2798-c02e30/deployedModels/gemma-3-4b-it-gfd37w0q",
+    id: "accounts/fireworks/models/glm-4p7",
     name: "Privy Coach",
     provider: "fireworks",
-    description: "Gemma 3 4B - Custom deployed for Privy",
+    description: "GLM-4.7 - 352B MoE, 198k context, advanced reasoning",
   },
 ];
 
