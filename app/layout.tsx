@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { TokenProvider } from "@/components/token-provider";
 
 import "./globals.css";
 
@@ -71,14 +70,15 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           disableTransitionOnChange
           enableSystem
         >
           <Toaster position="top-center" />
-          <TokenProvider>{children}</TokenProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>
   );
 }
+

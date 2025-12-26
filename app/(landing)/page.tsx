@@ -40,9 +40,11 @@ export default function LandingPage() {
                   Start anonymously <MoveRight className="h-5 w-5" />
                 </Button>
               </Link>
-              <Button className="text-base" size="lg" variant="outline">
-                How it works
-              </Button>
+              <a href="#how-it-works">
+                <Button className="text-base" size="lg" variant="outline">
+                  How it works
+                </Button>
+              </a>
             </div>
 
             <div className="flex flex-wrap gap-6 pt-4 text-muted-foreground text-sm">
@@ -116,7 +118,7 @@ export default function LandingPage() {
       </section>
 
       {/* Three Modes Section */}
-      <section className="border-t px-4 py-20">
+      <section className="border-t px-4 py-20" id="how-it-works">
         <div className="mx-auto max-w-6xl">
           <div className="mb-16 text-center">
             <h2 className="mb-4 font-bold text-3xl md:text-4xl">
