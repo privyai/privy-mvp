@@ -1,0 +1,12 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield background -->
+  <path d="M60 10L100 30V60C100 80 90 95 60 110C30 95 20 80 20 60V30L60 10Z" fill="#FF6B35"/>
+
+  <!-- Lock icon in center -->
+  <rect x="50" y="55" width="20" height="25" rx="2" fill="white"/>
+  <path d="M55 55V48C55 45.2386 57.2386 43 60 43C62.7614 43 65 45.2386 65 48V55" stroke="white" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Keyhole -->
+  <circle cx="60" cy="65" r="3" fill="#0A0A0A"/>
+  <rect x="58.5" y="65" width="3" height="8" fill="#0A0A0A"/>
+</svg>

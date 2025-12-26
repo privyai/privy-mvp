@@ -7,9 +7,49 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://privy.ai"),
-  title: "Privy | The Private AI Coach for Founders & Leaders",
+  title: {
+    default: "Privy | The Private AI Coach for Founders & Leaders",
+    template: "%s | Privy",
+  },
   description: "Anonymous, radically private AI coaching for founders and leaders. Think clearly under pressure, without consequences.",
-  keywords: ["AI coach", "founder", "leadership", "private", "anonymous", "executive coaching"],
+  keywords: ["AI coach", "founder", "leadership", "private", "anonymous", "executive coaching", "decision making", "mental performance"],
+  authors: [{ name: "Privy" }],
+  creator: "Privy",
+  publisher: "Privy",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://privy.ai",
+    siteName: "Privy",
+    title: "Privy | The Private AI Coach for Founders & Leaders",
+    description: "Anonymous, radically private AI coaching for founders and leaders. Think clearly under pressure, without consequences.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privy | The Private AI Coach for Founders & Leaders",
+    description: "Anonymous, radically private AI coaching for founders and leaders.",
+    creator: "@privyai",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-icon.png',
+  },
 };
 
 export const viewport = {
