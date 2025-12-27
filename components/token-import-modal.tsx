@@ -142,12 +142,14 @@ export function TokenImportModal({
             className="w-full"
             onClick={() => {
               // Clear ALL token-related storage to start fresh
+              // Use clearToken from token-client for consistency
               localStorage.removeItem("privy_has_token");
               localStorage.removeItem("privy_token_seen");
               localStorage.removeItem("privy_last_activity");
               localStorage.removeItem("privy_token_created");
               sessionStorage.removeItem("privy_access_token");
-              window.location.reload();
+              // Force full navigation (not just reload) to ensure fresh state
+              window.location.href = window.location.pathname;
             }}
           >
             Lost Token? Start Fresh
