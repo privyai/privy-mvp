@@ -464,7 +464,9 @@ function PureModelSelectorCompact({
     chatModels.find((m) => m.id === selectedModelId) ??
     chatModels.find((m) => m.id === DEFAULT_CHAT_MODEL) ??
     chatModels[0];
-  const [provider] = selectedModel.id.split("/");
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  const [providerFromId] = selectedModel.id.split("/");
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   // Provider display names
   const providerNames: Record<string, string> = {
@@ -473,18 +475,26 @@ function PureModelSelectorCompact({
     google: "Google",
     xai: "xAI",
     reasoning: "Reasoning",
+    fireworks: "Standard Model",
+    coaching: "Coaching Modes",
   };
 
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>
       <ModelSelectorTrigger asChild>
         <Button className="h-8 w-[200px] justify-between px-2" variant="ghost">
-          {provider && <ModelSelectorLogo provider={provider} />}
+          <ModelSelectorLogo
+            provider={
+              selectedModel.provider === "coaching"
+                ? "fireworks"
+                : selectedModel.provider
+            }
+          />
           <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent>
-        <ModelSelectorInput placeholder="Search models..." />
+        <ModelSelectorInput placeholder="Select coaching mode..." />
         <ModelSelectorList>
           {Object.entries(modelsByProvider).map(
             ([providerKey, providerModels]) => (
@@ -492,26 +502,29 @@ function PureModelSelectorCompact({
                 heading={providerNames[providerKey] ?? providerKey}
                 key={providerKey}
               >
-                {providerModels.map((model) => {
-                  const logoProvider = model.id.split("/")[0];
-                  return (
-                    <ModelSelectorItem
-                      key={model.id}
-                      onSelect={() => {
-                        onModelChange?.(model.id);
-                        setCookie("chat-model", model.id);
-                        setOpen(false);
-                      }}
-                      value={model.id}
-                    >
-                      <ModelSelectorLogo provider={logoProvider} />
-                      <ModelSelectorName>{model.name}</ModelSelectorName>
-                      {model.id === selectedModel.id && (
-                        <CheckIcon className="ml-auto size-4" />
-                      )}
-                    </ModelSelectorItem>
-                  );
-                })}
+                {providerModels.map((model) => (
+                  <ModelSelectorItem
+                    key={model.id}
+                    onSelect={() => {
+                      onModelChange?.(model.id);
+                      setCookie("chat-model", model.id);
+                      setOpen(false);
+                    }}
+                    value={model.id}
+                  >
+                    <ModelSelectorLogo
+                      provider={
+                        model.provider === "coaching"
+                          ? "fireworks"
+                          : model.provider
+                      }
+                    />
+                    <ModelSelectorName>{model.name}</ModelSelectorName>
+                    {model.id === selectedModel.id && (
+                      <CheckIcon className="ml-auto size-4" />
+                    )}
+                  </ModelSelectorItem>
+                ))}
               </ModelSelectorGroup>
             )
           )}

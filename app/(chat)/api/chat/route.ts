@@ -178,16 +178,23 @@ export async function POST(request: Request) {
         }
 
         // Models that output reasoning_content instead of content
+        // Models that output reasoning_content instead of content
+        // All modes use GLM-4.7 which supports reasoning
         const isReasoningModel =
+          selectedChatModel.startsWith("mode-") ||
           selectedChatModel.includes("reasoning") ||
           selectedChatModel.includes("thinking") ||
           selectedChatModel.includes("deepseek-v3") ||
           selectedChatModel.includes("deepseek-r1") ||
           selectedChatModel.includes("glm-4");
 
+        const actualModelId = selectedChatModel.startsWith("mode-")
+          ? "accounts/fireworks/models/glm-4p7"
+          : selectedChatModel;
+
         const result = streamText({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          model: getLanguageModel(selectedChatModel) as any,
+          model: getLanguageModel(actualModelId) as any,
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: await convertToModelMessages(uiMessages),
           temperature: 0.45,

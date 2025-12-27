@@ -14,7 +14,25 @@ export const chatModels: ChatModel[] = [
     id: "accounts/fireworks/models/glm-4p7",
     name: "Privy Coach",
     provider: "fireworks",
-    description: "GLM-4.7 - 352B MoE, 198k context, advanced reasoning",
+    description: "GLM-4.7 - Standard coaching mode",
+  },
+  {
+    id: "mode-vent",
+    name: "Vent",
+    provider: "coaching",
+    description: "Safe space for emotional decompression",
+  },
+  {
+    id: "mode-decision",
+    name: "Decision Lab",
+    provider: "coaching",
+    description: "Structured analysis for complex choices",
+  },
+  {
+    id: "mode-reframe",
+    name: "Reframe",
+    provider: "coaching",
+    description: "Shift perspective and regain clarity",
   },
 ];
 

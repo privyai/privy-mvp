@@ -85,8 +85,13 @@ function PureMessages({
             (status === "streaming" &&
               messages.length > 0 &&
               messages[messages.length - 1].role === "assistant" &&
+              // Don't show if there's any text content
               !messages[messages.length - 1].parts?.some(
                 (part) => part.type === "text" && part.text?.trim()
+              ) &&
+              // Don't show if there's any reasoning content (MessageReasoning handles it)
+              !messages[messages.length - 1].parts?.some(
+                (part) => part.type === "reasoning" && part.text?.trim()
               ))) &&
             !messages.some((msg) =>
               msg.parts?.some(
@@ -104,8 +109,8 @@ function PureMessages({
       <button
         aria-label="Scroll to bottom"
         className={`-translate-x-1/2 absolute bottom-4 left-1/2 z-10 rounded-full border bg-background p-2 shadow-lg transition-all hover:bg-muted ${isAtBottom
-            ? "pointer-events-none scale-0 opacity-0"
-            : "pointer-events-auto scale-100 opacity-100"
+          ? "pointer-events-none scale-0 opacity-0"
+          : "pointer-events-auto scale-100 opacity-100"
           }`}
         onClick={() => scrollToBottom("smooth")}
         type="button"
