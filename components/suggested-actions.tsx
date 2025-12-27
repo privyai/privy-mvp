@@ -27,7 +27,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % suggestedActions.length);
-    }, 2000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [suggestedActions.length]);
 
@@ -56,7 +56,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
           type="button"
         >
           <Sparkles className="h-3 w-3 shrink-0" />
-          <span className="truncate max-w-[280px] sm:max-w-none">
+          <span className="text-center">
             {currentSuggestion}
           </span>
         </motion.button>
