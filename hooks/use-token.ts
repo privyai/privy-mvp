@@ -86,8 +86,8 @@ export function useToken() {
     setToken(null);
     setHasToken(false);
     setIsFirstTime(false);
-    // Navigate to chat to generate new token
-    window.location.href = "/chat";
+    // Navigate to landing page - user can start fresh when they're ready
+    window.location.href = "/";
   };
 
   const importToken = (tokenString: string): boolean => {
