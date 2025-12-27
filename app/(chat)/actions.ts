@@ -27,6 +27,9 @@ export async function generateTitleFromUserMessage({
     model: getTitleModel() as any,
     system: titlePrompt,
     prompt: getTextFromMessage(message),
+    // @ts-ignore - version mismatch in beta SDK
+    maxTokens: 15,
+    temperature: 0,
   });
 
   return title;

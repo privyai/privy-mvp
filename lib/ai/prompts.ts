@@ -150,9 +150,10 @@ export const updateDocumentPrompt = (
   type: string
 ) => `Document updates are disabled in Privy.`;
 
-export const titlePrompt = `Generate a short, private title for this coaching session (2-4 words).
+export const titlePrompt = `Generate a short, private title for this coaching session (2-4 words maximum).
 Rules:
-- Maximum 25 characters
+- STRICT limit: Maximum 25 characters
+- NO sentences, only 2-4 word phrases
 - Plain text only - NO markdown, asterisks, or formatting
 - No personal identifying information
 - Focus on the theme, not details
