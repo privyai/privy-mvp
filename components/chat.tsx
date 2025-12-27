@@ -89,7 +89,7 @@ export function Chat({
   } = useChat<ChatMessage>({
     id,
     messages: initialMessages,
-    experimental_throttle: 30, // Faster streaming updates
+    experimental_throttle: 10, // Minimal throttle for continuous streaming
     generateId: generateUUID,
     // Auto-continue after tool approval (only for APPROVED tools)
     // Denied tools don't need server continuation - state is saved on next user message

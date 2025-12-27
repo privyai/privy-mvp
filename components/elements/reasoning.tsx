@@ -37,7 +37,7 @@ export type ReasoningProps = ComponentProps<typeof Collapsible> & {
   duration?: number;
 };
 
-const AUTO_CLOSE_DELAY = 500;
+const AUTO_CLOSE_DELAY = 200; // Reduced delay for snappier UX
 const MS_IN_S = 1000;
 
 export const Reasoning = memo(
@@ -156,7 +156,7 @@ export const ReasoningContent = memo(
     <CollapsibleContent
       className={cn(
         "mt-1.5 text-[11px] text-muted-foreground leading-relaxed",
-        "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 outline-hidden data-[state=closed]:animate-out data-[state=open]:animate-in",
+        "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 outline-hidden data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=open]:duration-100",
         className
       )}
       {...props}

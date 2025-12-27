@@ -77,10 +77,12 @@ function PureMessages({
             />
           ))}
 
-          {/* Show thinking indicator only when submitted but not yet streaming.
-              Once streaming starts, the Assistant message placeholder appears 
-              and handles the 'Thinking' state internally via MessageReasoning. */}
-          {status === "submitted" && <ThinkingMessage />}
+          {/* Keep thinking indicator visible until assistant response has content.
+              This prevents UI gap during async streaming when waiting for first tokens. */}
+          {(status === "submitted" ||
+            (status === "streaming" &&
+             messages[messages.length - 1]?.role === "user")) &&
+            <ThinkingMessage />}
 
           <div
             className="min-h-[24px] min-w-[24px] shrink-0"

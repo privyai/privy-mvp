@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-
+import { TokenProvider } from "@/components/token-provider";
 
 import "./globals.css";
 
@@ -75,8 +75,10 @@ export default function RootLayout({
           disableTransitionOnChange
           enableSystem
         >
-          <Toaster position="top-center" />
-          {children}
+          <TokenProvider>
+            <Toaster position="top-center" />
+            {children}
+          </TokenProvider>
         </ThemeProvider>
       </body>
     </html>

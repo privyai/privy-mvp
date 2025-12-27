@@ -2,7 +2,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
-  smoothStream,
   stepCountIs,
   streamText,
 } from "ai";
@@ -207,10 +206,8 @@ export async function POST(request: Request) {
               "updateDocument",
               "requestSuggestions",
             ],
-          experimental_transform: isReasoningModel
-            ? undefined
-            : smoothStream({ chunking: "word" }),
-          // providerOptions removed for OpenAI provider compatibility
+          // No smoothStream - enable direct async streaming without buffering
+          experimental_transform: undefined,
           tools: {
             getWeather,
             createDocument: createDocument({
@@ -232,7 +229,8 @@ export async function POST(request: Request) {
           },
         });
 
-        result.consumeStream();
+        // Don't pre-consume stream - let it flow directly to client for true async streaming
+        // result.consumeStream();
 
         dataStream.merge(
           result.toUIMessageStream({

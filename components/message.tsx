@@ -55,7 +55,7 @@ const PurePreviewMessage = ({
 
   return (
     <div
-      className="group/message fade-in w-full animate-in duration-200"
+      className="group/message fade-in w-full animate-in duration-75"
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
@@ -377,7 +377,7 @@ export const PreviewMessage = memo(
 export const ThinkingMessage = () => {
   return (
     <div
-      className="group/message fade-in w-full animate-in duration-300"
+      className="group/message fade-in w-full animate-in duration-75"
       data-role="assistant"
       data-testid="message-assistant-loading"
     >
