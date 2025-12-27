@@ -77,7 +77,17 @@ function PureMessages({
             />
           ))}
 
-          {status === "submitted" &&
+          {/* Show thinking indicator when:
+              1. Request is submitted but not yet streaming
+              2. Streaming has started but last message has no visible content yet
+           */}
+          {(status === "submitted" ||
+            (status === "streaming" &&
+              messages.length > 0 &&
+              messages[messages.length - 1].role === "assistant" &&
+              !messages[messages.length - 1].parts?.some(
+                (part) => part.type === "text" && part.text?.trim()
+              ))) &&
             !messages.some((msg) =>
               msg.parts?.some(
                 (part) => "state" in part && part.state === "approval-responded"
@@ -93,11 +103,10 @@ function PureMessages({
 
       <button
         aria-label="Scroll to bottom"
-        className={`-translate-x-1/2 absolute bottom-4 left-1/2 z-10 rounded-full border bg-background p-2 shadow-lg transition-all hover:bg-muted ${
-          isAtBottom
+        className={`-translate-x-1/2 absolute bottom-4 left-1/2 z-10 rounded-full border bg-background p-2 shadow-lg transition-all hover:bg-muted ${isAtBottom
             ? "pointer-events-none scale-0 opacity-0"
             : "pointer-events-auto scale-100 opacity-100"
-        }`}
+          }`}
         onClick={() => scrollToBottom("smooth")}
         type="button"
       >
