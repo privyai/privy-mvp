@@ -29,7 +29,8 @@ export function useToken() {
     const storedToken = getStoredToken();
     const returning = isReturningUser();
     const withinGrace = isWithinGracePeriod();
-    const expired = isTokenExpired();
+    // Only check expiry for returning users - new users don't have expiry yet
+    const expired = returning && isTokenExpired();
 
     if (storedToken) {
       // Token exists in current session - use it
@@ -47,7 +48,7 @@ export function useToken() {
       setHasToken(true);
       setIsFirstTime(false);
       setNeedsImport(false);
-    } else if (returning || expired) {
+    } else if (returning) {
       // Returning user after grace period OR token expired - needs to import
       setToken(null);
       setHasToken(false);
@@ -59,7 +60,8 @@ export function useToken() {
       storeToken(newToken);
       setToken(newToken);
       setHasToken(true);
-      setIsFirstTime(true);
+      // Only show token display if they haven't already seen/acknowledged it
+      setIsFirstTime(!hasSeenToken());
       setNeedsImport(false);
     }
 
