@@ -91,7 +91,7 @@ function PureMessages({
               ) &&
               // Don't show if there's any reasoning content (MessageReasoning handles it)
               !messages[messages.length - 1].parts?.some(
-                (part) => part.type === "reasoning" && part.text?.trim()
+                (part) => part.type === "reasoning"
               ))) &&
             !messages.some((msg) =>
               msg.parts?.some(
