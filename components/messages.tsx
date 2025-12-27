@@ -77,27 +77,10 @@ function PureMessages({
             />
           ))}
 
-          {/* Show thinking indicator when:
-              1. Request is submitted but not yet streaming
-              2. Streaming has started but last message has no visible content yet
-           */}
-          {(status === "submitted" ||
-            (status === "streaming" &&
-              messages.length > 0 &&
-              messages[messages.length - 1].role === "assistant" &&
-              // Don't show if there's any text content
-              !messages[messages.length - 1].parts?.some(
-                (part) => part.type === "text" && part.text?.trim()
-              ) &&
-              // Don't show if there's any reasoning content (MessageReasoning handles it)
-              !messages[messages.length - 1].parts?.some(
-                (part) => part.type === "reasoning"
-              ))) &&
-            !messages.some((msg) =>
-              msg.parts?.some(
-                (part) => "state" in part && part.state === "approval-responded"
-              )
-            ) && <ThinkingMessage />}
+          {/* Show thinking indicator only when submitted but not yet streaming.
+              Once streaming starts, the Assistant message placeholder appears 
+              and handles the 'Thinking' state internally via MessageReasoning. */}
+          {status === "submitted" && <ThinkingMessage />}
 
           <div
             className="min-h-[24px] min-w-[24px] shrink-0"

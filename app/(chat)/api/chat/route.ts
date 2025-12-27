@@ -210,9 +210,7 @@ export async function POST(request: Request) {
           experimental_transform: isReasoningModel
             ? undefined
             : smoothStream({ chunking: "word" }),
-          providerOptions: {
-            // Let model use default reasoning effort (GLM-4.7 defaults to interleaved/on)
-          },
+          // providerOptions removed for OpenAI provider compatibility
           tools: {
             getWeather,
             createDocument: createDocument({
