@@ -129,6 +129,10 @@ export const systemPrompt = ({
   selectedChatModel: string;
   requestHints: RequestHints;
 }) => {
+  if (selectedChatModel.startsWith("mode-")) {
+    const mode = selectedChatModel.replace("mode-", "") as CoachingMode;
+    return getCoachingPrompt(mode);
+  }
   return regularPrompt;
 };
 

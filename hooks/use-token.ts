@@ -12,6 +12,9 @@ import {
   downloadTokenAsFile,
   importToken as importTokenUtil,
   isReturningUser,
+  isWithinGracePeriod,
+  isTokenExpired,
+  updateLastActivity,
 } from "@/lib/auth/token-client";
 
 export function useToken() {
@@ -25,6 +28,9 @@ export function useToken() {
     // Check for token in sessionStorage
     const storedToken = getStoredToken();
     const returning = isReturningUser();
+    const withinGrace = isWithinGracePeriod();
+    // Only check expiry for returning users - new users don't have expiry yet
+    const expired = returning && isTokenExpired();
 
     if (storedToken) {
       // Token exists in current session - use it
@@ -32,8 +38,18 @@ export function useToken() {
       setHasToken(true);
       setIsFirstTime(false);
       setNeedsImport(false);
+      updateLastActivity();
+    } else if (returning && withinGrace && !expired) {
+      // Returning user within 150s grace period - auto-generate (same behavior)
+      // They haven't been away long enough to need re-auth
+      const newToken = generateTokenClient();
+      storeToken(newToken);
+      setToken(newToken);
+      setHasToken(true);
+      setIsFirstTime(false);
+      setNeedsImport(false);
     } else if (returning) {
-      // Returning user, new session - needs to import token
+      // Returning user after grace period OR token expired - needs to import
       setToken(null);
       setHasToken(false);
       setIsFirstTime(false);
@@ -44,7 +60,8 @@ export function useToken() {
       storeToken(newToken);
       setToken(newToken);
       setHasToken(true);
-      setIsFirstTime(true);
+      // Only show token display if they haven't already seen/acknowledged it
+      setIsFirstTime(!hasSeenToken());
       setNeedsImport(false);
     }
 
@@ -71,8 +88,8 @@ export function useToken() {
     setToken(null);
     setHasToken(false);
     setIsFirstTime(false);
-    // Reload to generate new token
-    window.location.reload();
+    // Navigate to landing page - user can start fresh when they're ready
+    window.location.href = "/";
   };
 
   const importToken = (tokenString: string): boolean => {

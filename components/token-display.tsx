@@ -19,6 +19,7 @@ interface TokenDisplayProps {
   onAcknowledge: () => void;
   onCopy: () => Promise<boolean>;
   onDownload: () => void;
+  onSwitchToImport?: () => void;
 }
 
 export function TokenDisplay({
@@ -27,6 +28,7 @@ export function TokenDisplay({
   onAcknowledge,
   onCopy,
   onDownload,
+  onSwitchToImport,
 }: TokenDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -47,7 +49,7 @@ export function TokenDisplay({
   const tokenChunks = formatTokenForDisplay(token);
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={() => { }}>
       <DialogContent className="sm:max-w-[600px]" hideClose>
         <DialogHeader>
           <DialogTitle className="text-2xl">
@@ -144,7 +146,7 @@ export function TokenDisplay({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-2">
           <Button
             onClick={handleAcknowledge}
             disabled={!acknowledged}
@@ -153,8 +155,18 @@ export function TokenDisplay({
           >
             I've Saved My Token - Continue to Privy
           </Button>
+          {onSwitchToImport && (
+            <button
+              type="button"
+              onClick={onSwitchToImport}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Already have a token? Import existing
+            </button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+

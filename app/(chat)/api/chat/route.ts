@@ -2,7 +2,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
-  smoothStream,
   stepCountIs,
   streamText,
 } from "ai";
@@ -178,16 +177,23 @@ export async function POST(request: Request) {
         }
 
         // Models that output reasoning_content instead of content
+        // Models that output reasoning_content instead of content
+        // All modes use GLM-4.7 which supports reasoning
         const isReasoningModel =
+          selectedChatModel.startsWith("mode-") ||
           selectedChatModel.includes("reasoning") ||
           selectedChatModel.includes("thinking") ||
           selectedChatModel.includes("deepseek-v3") ||
           selectedChatModel.includes("deepseek-r1") ||
           selectedChatModel.includes("glm-4");
 
+        const actualModelId = selectedChatModel.startsWith("mode-")
+          ? "accounts/fireworks/models/glm-4p7"
+          : selectedChatModel;
+
         const result = streamText({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          model: getLanguageModel(selectedChatModel) as any,
+          model: getLanguageModel(actualModelId) as any,
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: await convertToModelMessages(uiMessages),
           temperature: 0.45,
@@ -200,16 +206,8 @@ export async function POST(request: Request) {
               "updateDocument",
               "requestSuggestions",
             ],
-          experimental_transform: isReasoningModel
-            ? undefined
-            : smoothStream({ chunking: "word" }),
-          providerOptions: {
-            // Fireworks: Control reasoning mode for GLM-4.7/DeepSeek
-            // 'none' = fast streaming, 'medium' = deeper thinking (slower, buffered)
-            fireworks: {
-              reasoning_effort: "none", // Fast streaming mode by default
-            },
-          },
+          // No smoothStream - enable direct async streaming without buffering
+          experimental_transform: undefined,
           tools: {
             getWeather,
             createDocument: createDocument({
@@ -231,7 +229,8 @@ export async function POST(request: Request) {
           },
         });
 
-        result.consumeStream();
+        // Don't pre-consume stream - let it flow directly to client for true async streaming
+        // result.consumeStream();
 
         dataStream.merge(
           result.toUIMessageStream({

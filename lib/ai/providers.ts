@@ -1,6 +1,5 @@
 import { createFireworks } from "@ai-sdk/fireworks";
 
-// Fireworks AI provider (AI SDK 5 compatible)
 const fireworks = createFireworks({
   apiKey: process.env.FIREWORKS_API_KEY ?? "",
 });
@@ -10,10 +9,9 @@ const fireworks = createFireworks({
 const DEFAULT_MODEL = "accounts/fireworks/models/glm-4p7";
 
 // Note: Return type is `any` to work around @ai-sdk/provider version mismatch
-// between @ai-sdk/fireworks (3.0.0-beta) and ai package (2.0.0)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getLanguageModel(modelId?: string): any {
-  return fireworks(DEFAULT_MODEL);
+  return fireworks(modelId || DEFAULT_MODEL);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

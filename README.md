@@ -323,10 +323,6 @@ pnpm exec playwright test --ui
 
 ### Deploy to Vercel (Recommended)
 
-**One-Click Deploy**:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/privyai/privy-mvp)
-
 **Manual Deployment**:
 
 ```bash

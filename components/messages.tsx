@@ -77,12 +77,12 @@ function PureMessages({
             />
           ))}
 
-          {status === "submitted" &&
-            !messages.some((msg) =>
-              msg.parts?.some(
-                (part) => "state" in part && part.state === "approval-responded"
-              )
-            ) && <ThinkingMessage />}
+          {/* Keep thinking indicator visible until assistant response has content.
+              This prevents UI gap during async streaming when waiting for first tokens. */}
+          {(status === "submitted" ||
+            (status === "streaming" &&
+             messages[messages.length - 1]?.role === "user")) &&
+            <ThinkingMessage />}
 
           <div
             className="min-h-[24px] min-w-[24px] shrink-0"
@@ -93,11 +93,10 @@ function PureMessages({
 
       <button
         aria-label="Scroll to bottom"
-        className={`-translate-x-1/2 absolute bottom-4 left-1/2 z-10 rounded-full border bg-background p-2 shadow-lg transition-all hover:bg-muted ${
-          isAtBottom
-            ? "pointer-events-none scale-0 opacity-0"
-            : "pointer-events-auto scale-100 opacity-100"
-        }`}
+        className={`-translate-x-1/2 absolute bottom-4 left-1/2 z-10 rounded-full border bg-background p-2 shadow-lg transition-all hover:bg-muted ${isAtBottom
+          ? "pointer-events-none scale-0 opacity-0"
+          : "pointer-events-auto scale-100 opacity-100"
+          }`}
         onClick={() => scrollToBottom("smooth")}
         type="button"
       >

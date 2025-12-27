@@ -55,7 +55,7 @@ const PurePreviewMessage = ({
 
   return (
     <div
-      className="group/message fade-in w-full animate-in duration-200"
+      className="group/message fade-in w-full animate-in duration-75"
       data-role={message.role}
       data-testid={`message-${message.role}`}
     >
@@ -109,7 +109,7 @@ const PurePreviewMessage = ({
             const { type } = part;
             const key = `message-${message.id}-part-${index}`;
 
-            if (type === "reasoning" && part.text?.trim().length > 0) {
+            if (type === "reasoning") {
               return (
                 <MessageReasoning
                   isLoading={isLoading}
@@ -221,8 +221,8 @@ const PurePreviewMessage = ({
                     <ToolContent>
                       {(state === "input-available" ||
                         state === "approval-requested") && (
-                        <ToolInput input={part.input} />
-                      )}
+                          <ToolInput input={part.input} />
+                        )}
                       {state === "approval-requested" && approvalId && (
                         <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
                           <button
@@ -377,7 +377,7 @@ export const PreviewMessage = memo(
 export const ThinkingMessage = () => {
   return (
     <div
-      className="group/message fade-in w-full animate-in duration-300"
+      className="group/message fade-in w-full animate-in duration-75"
       data-role="assistant"
       data-testid="message-assistant-loading"
     >
