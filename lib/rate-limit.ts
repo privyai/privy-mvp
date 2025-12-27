@@ -1,30 +1,24 @@
 import "server-only";
 import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
-
-// Initialize Redis client
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+import { kv } from "@vercel/kv";
 
 // Rate limiters for different endpoints
 export const chatRateLimit = new Ratelimit({
-  redis,
+  redis: kv, // Use Vercel KV
   limiter: Ratelimit.slidingWindow(30, "1 m"), // 30 messages per minute
   analytics: true,
   prefix: "ratelimit:chat",
 });
 
 export const accountCreationRateLimit = new Ratelimit({
-  redis,
+  redis: kv, // Use Vercel KV
   limiter: Ratelimit.slidingWindow(5, "1 h"), // 5 accounts per hour per IP
   analytics: true,
   prefix: "ratelimit:account",
 });
 
 export const apiRateLimit = new Ratelimit({
-  redis,
+  redis: kv, // Use Vercel KV
   limiter: Ratelimit.slidingWindow(100, "1 m"), // 100 API calls per minute
   analytics: true,
   prefix: "ratelimit:api",
