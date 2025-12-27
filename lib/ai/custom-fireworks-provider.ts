@@ -15,24 +15,9 @@ export class FireworksLanguageModel {
         return "fireworks-custom";
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async doGenerate(options: any): Promise<any> {
-        throw new Error("Non-streaming not implemented for custom provider");
-    }
-
-    async doStream(
+    private convertToOpenAIMessages(prompt: any[]) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        options: any
-    ): Promise<{
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        stream: ReadableStream<any>;
-        rawCall: { rawPrompt: unknown; rawSettings: Record<string, unknown> };
-    }> {
-        const openai = new OpenAI(this.config);
-
-        // Convert V1 prompt to OpenAI messages
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const messages = options.prompt.map((msg: any) => {
+        return prompt.map((msg: any) => {
             let content = "";
             if (typeof msg.content === "string") {
                 content = msg.content;
@@ -51,6 +36,43 @@ export class FireworksLanguageModel {
                 content: content,
             };
         });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async doGenerate(options: any): Promise<any> {
+        const openai = new OpenAI(this.config);
+        const messages = this.convertToOpenAIMessages(options.prompt);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const response = await openai.chat.completions.create({
+            model: this.modelId,
+            messages: messages as any,
+            stream: false,
+        } as any) as any;
+
+        return {
+            text: response.choices[0]?.message.content ?? "",
+            finishReason: response.choices[0]?.finish_reason,
+            usage: {
+                promptTokens: response.usage?.prompt_tokens ?? 0,
+                completionTokens: response.usage?.completion_tokens ?? 0,
+            },
+            rawCall: { rawPrompt: options.prompt, rawSettings: {} }
+        };
+    }
+
+    async doStream(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        options: any
+    ): Promise<{
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        stream: ReadableStream<any>;
+        rawCall: { rawPrompt: unknown; rawSettings: Record<string, unknown> };
+    }> {
+        const openai = new OpenAI(this.config);
+
+        // Convert V1 prompt to OpenAI messages
+        const messages = this.convertToOpenAIMessages(options.prompt);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const response = await openai.chat.completions.create({
