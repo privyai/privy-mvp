@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { memo } from "react";
@@ -25,8 +26,20 @@ function PureChatHeader({
   const { width: windowWidth } = useWindowSize();
 
   return (
-    <header className="sticky top-0 flex items-center gap-2 bg-background px-2 py-1.5 md:px-2">
+    <header className="sticky top-0 flex items-center gap-2 border-b bg-background/95 px-2 py-1.5 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-2">
       <SidebarToggle />
+
+      {/* Logo */}
+      <Link href="/chat" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+        <Image
+          src="/logo-simple.svg"
+          alt="Privy"
+          width={20}
+          height={20}
+          className="opacity-70"
+        />
+        <span className="font-semibold text-sm hidden md:inline-block">Privy</span>
+      </Link>
 
       {(!open || windowWidth < 768) && (
         <Button

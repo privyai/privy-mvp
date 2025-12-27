@@ -109,14 +109,9 @@ const PurePreviewMessage = ({
             const { type } = part;
             const key = `message-${message.id}-part-${index}`;
 
+            // Skip reasoning parts - render them at the bottom
             if (type === "reasoning") {
-              return (
-                <MessageReasoning
-                  isLoading={isLoading}
-                  key={key}
-                  reasoning={part.text}
-                />
-              );
+              return null;
             }
 
             if (type === "text") {
@@ -340,6 +335,18 @@ const PurePreviewMessage = ({
             }
 
             return null;
+          })}
+
+          {/* Render reasoning parts at the bottom for consistent UI */}
+          {message.parts?.map((part, index) => {
+            if (part.type !== "reasoning") return null;
+            return (
+              <MessageReasoning
+                isLoading={isLoading}
+                key={`message-${message.id}-reasoning-${index}`}
+                reasoning={part.text}
+              />
+            );
           })}
 
           {!isReadonly && (
