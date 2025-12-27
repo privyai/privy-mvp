@@ -2,7 +2,7 @@ import OpenAI from "openai";
 
 // Mimic LanguageModelV1 interface structurally to avoid import issues
 export class FireworksLanguageModel {
-    readonly specificationVersion = "v1";
+    readonly specificationVersion = "v2";
     readonly defaultObjectGenerationMode = "json";
     readonly supportsStructuredOutputs = false;
 
