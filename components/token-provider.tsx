@@ -130,6 +130,21 @@ export function TokenProvider({ children }: TokenProviderProps) {
     burnAccount,
   };
 
+  // State to allow switching from new token display to import modal
+  const [showImportInstead, setShowImportInstead] = useState(false);
+
+  const handleSwitchToImport = () => {
+    setShowImportInstead(true);
+  };
+
+  const handleImport = (tokenString: string) => {
+    const success = importToken(tokenString);
+    if (success) {
+      setShowImportInstead(false);
+    }
+    return success;
+  };
+
   return (
     <TokenContext.Provider value={contextValue}>
       {contextValue.isLoading ? (
@@ -138,19 +153,20 @@ export function TokenProvider({ children }: TokenProviderProps) {
         </div>
       ) : (
         <>
-          {token && isFirstTime && (
+          {token && isFirstTime && !showImportInstead && (
             <TokenDisplay
               token={token}
               isOpen={isFirstTime}
               onAcknowledge={acknowledgeToken}
               onCopy={copyToken}
               onDownload={downloadToken}
+              onSwitchToImport={handleSwitchToImport}
             />
           )}
-          {needsImport && (
+          {(needsImport || showImportInstead) && (
             <TokenImportModal
-              isOpen={needsImport}
-              onImport={importToken}
+              isOpen={needsImport || showImportInstead}
+              onImport={handleImport}
             />
           )}
           {children}
