@@ -57,8 +57,6 @@ export class FireworksLanguageModel {
             model: this.modelId,
             messages: messages as any,
             stream: true,
-            // @ts-ignore - Extra body allowed by OpenAI types but strict check fails
-            extra_body: { reasoning_effort: "low" },
         } as any) as any;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
