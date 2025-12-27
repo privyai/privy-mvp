@@ -8,7 +8,7 @@ export type ChatModel = {
   description: string;
 };
 
-// Simplified model list for Privy - GLM-4.7
+// Simplified model list for Privy - MiniMax-M2.1
 export const chatModels: ChatModel[] = [
   {
     id: "accounts/fireworks/models/minimax-m2p1",
