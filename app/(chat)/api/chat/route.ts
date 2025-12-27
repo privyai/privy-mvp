@@ -177,18 +177,15 @@ export async function POST(request: Request) {
         }
 
         // Models that output reasoning_content instead of content
-        // Models that output reasoning_content instead of content
-        // All modes use GLM-4.7 which supports reasoning
+        // MiniMax-M2.1 does NOT output reasoning_content - standard content streaming
         const isReasoningModel =
-          selectedChatModel.startsWith("mode-") ||
           selectedChatModel.includes("reasoning") ||
           selectedChatModel.includes("thinking") ||
-          selectedChatModel.includes("deepseek-v3") ||
           selectedChatModel.includes("deepseek-r1") ||
           selectedChatModel.includes("glm-4");
 
         const actualModelId = selectedChatModel.startsWith("mode-")
-          ? "accounts/fireworks/models/glm-4p7"
+          ? "accounts/fireworks/models/minimax-m2p1"
           : selectedChatModel;
 
         const result = streamText({
