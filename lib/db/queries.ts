@@ -174,6 +174,21 @@ export async function burnUserByTokenHash(tokenHash: string): Promise<void> {
   }
 }
 
+// Free users limited to 10 chats
+export const FREE_USER_CHAT_LIMIT = 10;
+
+export async function getChatCountByUserId({ userId }: { userId: string }) {
+  try {
+    const result = await db
+      .select({ count: count() })
+      .from(chat)
+      .where(eq(chat.userId, userId));
+    return result[0]?.count ?? 0;
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to count user chats");
+  }
+}
+
 export async function saveChat({
   id,
   userId,

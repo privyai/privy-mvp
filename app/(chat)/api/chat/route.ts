@@ -22,7 +22,9 @@ import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
+  FREE_USER_CHAT_LIMIT,
   getChatById,
+  getChatCountByUserId,
   getMessageCountByUserId,
   getMessagesByChatId,
   saveChat,
@@ -120,6 +122,13 @@ export async function POST(request: Request) {
         messagesFromDb = await getMessagesByChatId({ id });
       }
     } else if (message?.role === "user") {
+      // Check chat limit for new conversations
+      const chatCount = await getChatCountByUserId({ userId: user.id });
+
+      if (chatCount >= FREE_USER_CHAT_LIMIT) {
+        return new ChatSDKError("rate_limit:chat", "You have reached the maximum number of chats (10) allowed on the free plan. Please contact support or burn existing chats to start a new one.").toResponse();
+      }
+
       // Save chat immediately with placeholder title
       await saveChat({
         id,
