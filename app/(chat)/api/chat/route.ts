@@ -211,11 +211,7 @@ export async function POST(request: Request) {
             ? undefined
             : smoothStream({ chunking: "word" }),
           providerOptions: {
-            // Fireworks: Control reasoning mode for GLM-4.7/DeepSeek
-            // 'none' = fast streaming, 'medium' = deeper thinking (slower, buffered)
-            fireworks: {
-              reasoning_effort: "none", // Fast streaming mode by default
-            },
+            // Let model use default reasoning effort (GLM-4.7 defaults to interleaved/on)
           },
           tools: {
             getWeather,

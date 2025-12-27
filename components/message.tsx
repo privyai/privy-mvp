@@ -109,7 +109,7 @@ const PurePreviewMessage = ({
             const { type } = part;
             const key = `message-${message.id}-part-${index}`;
 
-            if (type === "reasoning" && part.text?.trim().length > 0) {
+            if (type === "reasoning") {
               return (
                 <MessageReasoning
                   isLoading={isLoading}
@@ -221,8 +221,8 @@ const PurePreviewMessage = ({
                     <ToolContent>
                       {(state === "input-available" ||
                         state === "approval-requested") && (
-                        <ToolInput input={part.input} />
-                      )}
+                          <ToolInput input={part.input} />
+                        )}
                       {state === "approval-requested" && approvalId && (
                         <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
                           <button
