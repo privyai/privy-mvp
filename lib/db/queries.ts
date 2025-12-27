@@ -24,6 +24,7 @@ import {
   type DBMessage,
   document,
   message,
+  ipRateLimit,
   type Suggestion,
   stream,
   suggestion,
@@ -79,6 +80,73 @@ export async function createGuestUser() {
   }
 }
 
+/**
+ * Check if an IP has exceeded its token generation limit (e.g., 5 tokens / 24h)
+ * Returns { allowed: boolean, count: number }
+ */
+export async function checkIPRateLimit(ipHash: string): Promise<{
+  allowed: boolean;
+  count: number;
+}> {
+  const LIMIT = 5; // Allow 5 tokens per IP per 24 hours
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+  try {
+    const [rateLimit] = await db
+      .select()
+      .from(ipRateLimit)
+      .where(eq(ipRateLimit.ipHash, ipHash));
+
+    if (!rateLimit) {
+      return { allowed: true, count: 0 };
+    }
+
+    const isExpired = Date.now() - rateLimit.lastGeneratedAt.getTime() > TWENTY_FOUR_HOURS;
+
+    if (isExpired) {
+      // Reset count if 24h passed
+      await db
+        .update(ipRateLimit)
+        .set({ count: 0, lastGeneratedAt: new Date() })
+        .where(eq(ipRateLimit.ipHash, ipHash));
+      return { allowed: true, count: 0 };
+    }
+
+    return { allowed: rateLimit.count < LIMIT, count: rateLimit.count };
+  } catch (_error) {
+    // Fail safe: allow if DB check fails, but log it
+    console.warn("Failed to check IP rate limit:", _error);
+    return { allowed: true, count: 0 };
+  }
+}
+
+/**
+ * Increment the token generation count for an IP
+ */
+export async function incrementIPRateLimit(ipHash: string): Promise<void> {
+  try {
+    const [existing] = await db
+      .select()
+      .from(ipRateLimit)
+      .where(eq(ipRateLimit.ipHash, ipHash));
+
+    if (!existing) {
+      await db.insert(ipRateLimit).values({
+        ipHash,
+        count: 1,
+        lastGeneratedAt: new Date(),
+      });
+    } else {
+      await db
+        .update(ipRateLimit)
+        .set({ count: existing.count + 1, lastGeneratedAt: new Date() })
+        .where(eq(ipRateLimit.ipHash, ipHash));
+    }
+  } catch (_error) {
+    console.warn("Failed to increment IP rate limit:", _error);
+  }
+}
+
 // ============================================
 // Zero-Trust Token Authentication Functions
 // ============================================
@@ -131,7 +199,10 @@ export async function createTokenUser(tokenHash: string): Promise<User> {
 /**
  * Get or create user by token hash (idempotent)
  */
-export async function getOrCreateTokenUser(tokenHash: string): Promise<User> {
+export async function getOrCreateTokenUser(
+  tokenHash: string,
+  ipHash?: string
+): Promise<User> {
   // Try to find existing user
   const existingUser = await getUserByTokenHash(tokenHash);
 
@@ -143,6 +214,19 @@ export async function getOrCreateTokenUser(tokenHash: string): Promise<User> {
       .where(eq(user.id, existingUser.id));
 
     return existingUser;
+  }
+
+  // NEW USER - Check IP rate limit if provided
+  if (ipHash) {
+    const { allowed } = await checkIPRateLimit(ipHash);
+    if (!allowed) {
+      throw new ChatSDKError(
+        "rate_limit:chat",
+        "Too many accounts created from this IP today. Please try again later or contact support."
+      );
+    }
+    // Increment count for new account
+    await incrementIPRateLimit(ipHash);
   }
 
   // Create new user

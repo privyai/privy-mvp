@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -18,6 +19,7 @@ export const user = pgTable("User", {
   password: varchar("password", { length: 64 }),
   // Zero-trust token auth (new approach)
   tokenHash: varchar("tokenHash", { length: 64 }).unique(),
+  plan: varchar("plan", { length: 32 }).notNull().default("free"),
   // Metadata
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   lastActiveAt: timestamp("lastActiveAt"),
@@ -174,3 +176,11 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+export const ipRateLimit = pgTable("IPRateLimit", {
+  ipHash: varchar("ipHash", { length: 64 }).primaryKey(),
+  count: integer("count").notNull().default(0),
+  lastGeneratedAt: timestamp("lastGeneratedAt").notNull().defaultNow(),
+});
+
+export type IPRateLimit = InferSelectModel<typeof ipRateLimit>;

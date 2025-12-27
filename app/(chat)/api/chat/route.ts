@@ -90,9 +90,11 @@ export async function POST(request: Request) {
       differenceInHours: 24,
     });
 
-    // All token users have the same rate limit (50 messages/day)
-    const maxMessages = 50;
-    const isAllowed = messageCount <= maxMessages;
+    const isFreePlan = user.plan === "free";
+
+    // Daily message limit for free users (across all chats)
+    const maxMessages = 30;
+    const isAllowed = !isFreePlan || messageCount < maxMessages;
 
     // Log rate limit check to Logfire (with hashed user ID for privacy)
     logRateLimitCheck({
@@ -103,7 +105,10 @@ export async function POST(request: Request) {
     });
 
     if (!isAllowed) {
-      return new ChatSDKError("rate_limit:chat").toResponse();
+      return new ChatSDKError(
+        "rate_limit:chat",
+        "You have reached the free tier limit of 30 messages per 24 hours. Please contact support to upgrade."
+      ).toResponse();
     }
 
     // Check if this is a tool approval flow (all messages sent)
@@ -122,10 +127,11 @@ export async function POST(request: Request) {
         messagesFromDb = await getMessagesByChatId({ id });
       }
     } else if (message?.role === "user") {
-      // Check chat limit for new conversations
+      // Check chat limit for free users (new conversations)
+      const isFreePlan = user.plan === "free";
       const chatCount = await getChatCountByUserId({ userId: user.id });
 
-      if (chatCount >= FREE_USER_CHAT_LIMIT) {
+      if (isFreePlan && chatCount >= FREE_USER_CHAT_LIMIT) {
         return new ChatSDKError("rate_limit:chat", "You have reached the maximum number of chats (10) allowed on the free plan. Please contact support or burn existing chats to start a new one.").toResponse();
       }
 

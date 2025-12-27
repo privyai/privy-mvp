@@ -1,7 +1,7 @@
 import "server-only";
 import type { User } from "@/lib/db/schema";
 import { getOrCreateTokenUser } from "@/lib/db/queries";
-import { hashToken, isValidTokenFormat } from "./token";
+import { hashToken, hashIp, isValidTokenFormat } from "./token";
 
 /**
  * Server-side token authentication
@@ -44,8 +44,13 @@ export async function authenticateToken(
     // Hash the token
     const tokenHash = hashToken(token);
 
+    // Extract IP for rate limiting new account creation
+    const forwarded = request.headers.get("x-forwarded-for");
+    const ip = forwarded ? forwarded.split(",")[0] : "127.0.0.1";
+    const ipHash = hashIp(ip);
+
     // Get or create user (idempotent)
-    const user = await getOrCreateTokenUser(tokenHash);
+    const user = await getOrCreateTokenUser(tokenHash, ipHash);
 
     return user;
   } catch (error) {
