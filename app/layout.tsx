@@ -6,10 +6,31 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://privy.ai"),
+  metadataBase: new URL("https://www.privycoach.ai"),
   title: "Privy | The Private AI Coach for Founders & Leaders",
   description: "Anonymous, radically private AI coaching for founders and leaders. Think clearly under pressure, without consequences.",
   keywords: ["AI coach", "founder", "leadership", "private", "anonymous", "executive coaching"],
+  openGraph: {
+    title: "Privy | The Private AI Coach for Founders & Leaders",
+    description: "Anonymous, radically private AI coaching for founders and leaders. Think clearly under pressure, without consequences.",
+    url: "https://www.privycoach.ai",
+    siteName: "Privy Coach",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Privy - Anonymous AI Coaching",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privy | The Private AI Coach for Founders & Leaders",
+    description: "Anonymous, radically private AI coaching for founders and leaders.",
+    images: ["/twitter-image.png"],
+  },
 };
 
 export const viewport = {
