@@ -494,7 +494,6 @@ function PureModelSelectorCompact({
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent>
-        <ModelSelectorInput placeholder="Select coaching mode..." />
         <ModelSelectorList>
           {Object.entries(modelsByProvider).map(
             ([providerKey, providerModels]) => (

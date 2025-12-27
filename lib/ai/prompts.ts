@@ -153,6 +153,7 @@ export const updateDocumentPrompt = (
 export const titlePrompt = `Generate a short, private title for this coaching session (2-4 words).
 Rules:
 - Maximum 25 characters
+- Plain text only - NO markdown, asterisks, or formatting
 - No personal identifying information
 - Focus on the theme, not details
 - Examples: "Career Crossroads", "Team Frustration", "Big Decision"`;

@@ -49,7 +49,7 @@ export const Greeting = () => {
       {/* Welcome Message */}
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="mb-2 text-center font-semibold text-xl md:text-2xl"
+        className="mb-1 text-center font-semibold text-xl md:text-2xl"
         exit={{ opacity: 0, y: 10 }}
         initial={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.4 }}
@@ -58,13 +58,24 @@ export const Greeting = () => {
       </motion.div>
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 text-center text-muted-foreground text-lg md:text-xl"
+        className="mb-2 text-center text-muted-foreground text-lg md:text-xl"
         exit={{ opacity: 0, y: 10 }}
         initial={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.5 }}
       >
         What's on your mind?
       </motion.div>
+
+      {/* Privacy Footer moved here for mobile */}
+      <motion.p
+        animate={{ opacity: 1 }}
+        className="mb-4 text-center text-muted-foreground text-[10px] md:text-xs"
+        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        transition={{ delay: 0.55 }}
+      >
+        Zero-trust privacy • Your token = your identity • Burn sessions anytime
+      </motion.p>
 
       {/* Coaching Modes */}
       <motion.div
@@ -93,17 +104,6 @@ export const Greeting = () => {
           </motion.div>
         ))}
       </motion.div>
-
-      {/* Privacy Footer */}
-      <motion.p
-        animate={{ opacity: 1 }}
-        className="mt-6 text-center text-muted-foreground text-xs"
-        exit={{ opacity: 0 }}
-        initial={{ opacity: 0 }}
-        transition={{ delay: 1 }}
-      >
-        Zero-trust privacy • Your token = your identity • Burn sessions anytime
-      </motion.p>
     </div>
   );
 };

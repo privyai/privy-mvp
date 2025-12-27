@@ -81,11 +81,11 @@ function PureMessages({
               This prevents UI gap during async streaming when waiting for first tokens. */}
           {(status === "submitted" ||
             (status === "streaming" &&
-             messages[messages.length - 1]?.role === "user")) &&
+              messages[messages.length - 1]?.role === "user")) &&
             <ThinkingMessage />}
 
           <div
-            className="min-h-[24px] min-w-[24px] shrink-0"
+            className="min-h-[8px] min-w-[8px] shrink-0"
             ref={messagesEndRef}
           />
         </div>
