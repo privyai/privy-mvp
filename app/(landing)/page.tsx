@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChatPreview } from "@/components/chat-preview";
+import { PrivacyFlowDiagram } from "@/components/privacy-flow-diagram";
 
 export default function LandingPage() {
   return (
@@ -156,59 +157,8 @@ export default function LandingPage() {
       </section>
 
       {/* Privacy Section */}
-      <section className="border-t bg-muted/50 px-4 py-20">
-        <div className="mx-auto max-w-4xl space-y-6 text-center">
-          <h2 className="font-bold text-3xl md:text-4xl">
-            Privacy is the product.
-          </h2>
-          <p className="mb-8 text-muted-foreground text-xl">
-            Privy is built around a single principle:{" "}
-            <span className="font-semibold text-foreground">
-              nothing leaks.
-            </span>
-          </p>
-
-          <div className="mx-auto grid max-w-2xl gap-4 text-left md:grid-cols-2">
-            <div className="flex items-start gap-3">
-              <span className="mt-1 text-green-500">✓</span>
-              <div>
-                <p className="font-medium">No identity required</p>
-                <p className="text-muted-foreground text-sm">to start.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-1 text-green-500">✓</span>
-              <div>
-                <p className="font-medium">
-                  No chat history stored by default.
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  Free tier is ephemeral.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-1 text-green-500">✓</span>
-              <div>
-                <p className="font-medium">Minimal logging</p>
-                <p className="text-muted-foreground text-sm">(errors only).</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-1 text-green-500">✓</span>
-              <div>
-                <p className="font-medium">Burn sessions anytime,</p>
-                <p className="text-muted-foreground text-sm">one click.</p>
-              </div>
-            </div>
-          </div>
-
-          <p className="mx-auto mt-8 max-w-2xl border-t pt-6 text-muted-foreground text-sm">
-            Privy is not a medical service and does not provide therapy or
-            crisis support. If you're in immediate danger, contact local
-            emergency services.
-          </p>
-        </div>
+      <section className="border-t bg-muted/50 px-4 py-20" id="privacy">
+        <PrivacyFlowDiagram />
       </section>
 
       {/* Pricing Tiers */}
