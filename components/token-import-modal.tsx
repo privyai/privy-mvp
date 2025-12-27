@@ -141,9 +141,12 @@ export function TokenImportModal({
             size="lg"
             className="w-full"
             onClick={() => {
-              // Clear the returning user flag and reload to generate new token
+              // Clear ALL token-related storage to start fresh
               localStorage.removeItem("privy_has_token");
               localStorage.removeItem("privy_token_seen");
+              localStorage.removeItem("privy_last_activity");
+              localStorage.removeItem("privy_token_created");
+              sessionStorage.removeItem("privy_access_token");
               window.location.reload();
             }}
           >
