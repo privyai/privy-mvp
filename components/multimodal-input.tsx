@@ -307,7 +307,7 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
+        className="rounded-xl border border-border bg-background p-2 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
         onSubmit={(event) => {
           event.preventDefault();
           if (status !== "ready") {
@@ -357,7 +357,7 @@ function PureMultimodalInput({
             data-testid="multimodal-input"
             disableAutoResize={true}
             maxHeight={200}
-            minHeight={44}
+            minHeight={36}
             onChange={handleInput}
             placeholder="Send a message..."
             ref={textareaRef}
