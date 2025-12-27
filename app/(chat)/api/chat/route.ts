@@ -14,6 +14,7 @@ import { authenticateToken } from "@/lib/auth/token-auth";
 import { hashToken } from "@/lib/auth/token";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { chatRateLimit, getClientIP, isBotRequest } from "@/lib/rate-limit";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -83,6 +84,42 @@ export async function POST(request: Request) {
 
     if (!user) {
       return new ChatSDKError("unauthorized:chat").toResponse();
+    }
+
+    // Bot detection (using Cloudflare headers)
+    if (isBotRequest(request)) {
+      return new Response("Forbidden: Bot detected", { status: 403 });
+    }
+
+    // Rate limiting (per user)
+    const identifier = user.id;
+    const { success, limit, reset, remaining } = await chatRateLimit.limit(identifier);
+
+    logRateLimitCheck({
+      userId: hashToken(user.id), // Hash for privacy
+      messageCount: limit - remaining,
+      limit,
+      allowed: success,
+    });
+
+    if (!success) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          limit,
+          reset,
+          remaining,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+            "X-RateLimit-Reset": reset.toString(),
+          },
+        }
+      );
     }
 
     const messageCount = await getMessageCountByUserId({
