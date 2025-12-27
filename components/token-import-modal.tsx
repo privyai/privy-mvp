@@ -48,7 +48,7 @@ export function TokenImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => { }}>
-      <DialogContent className="sm:max-w-[600px]" hideClose>
+      <DialogContent className="sm:max-w-[600px] max-h-[85dvh] overflow-y-auto" hideClose>
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center">
             <KeyIcon className="mr-2 h-6 w-6" />
@@ -61,7 +61,7 @@ export function TokenImportModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Token Input */}
           <div>
             <label
@@ -75,7 +75,7 @@ export function TokenImportModal({
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
               placeholder="Enter your 64-character hexadecimal token..."
-              className="font-mono text-sm min-h-[120px]"
+              className="font-mono text-sm min-h-[80px]"
               autoFocus
             />
             {tokenInput && (
@@ -94,7 +94,7 @@ export function TokenImportModal({
           )}
 
           {/* Info Box */}
-          <div className="rounded-lg border border-blue-500 bg-blue-50 dark:bg-blue-950/20 p-4">
+          <div className="rounded-lg border border-blue-500 bg-blue-50 dark:bg-blue-950/20 p-3">
             <h4 className="font-semibold mb-2 flex items-center">
               <span className="mr-2 text-xl">ℹ️</span>
               Zero-Trust Privacy

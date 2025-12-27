@@ -50,7 +50,7 @@ export function TokenDisplay({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => { }}>
-      <DialogContent className="sm:max-w-[600px]" hideClose>
+      <DialogContent className="sm:max-w-[600px] max-h-[85dvh] overflow-y-auto" hideClose>
         <DialogHeader>
           <DialogTitle className="text-2xl">
             Your Private Access Token
@@ -61,9 +61,9 @@ export function TokenDisplay({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Token Display */}
-          <div className="rounded-lg border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20 p-4">
+          <div className="rounded-lg border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20 p-3">
             <div className="font-mono text-sm break-all leading-relaxed">
               {tokenChunks.map((chunk, i) => (
                 <span key={i} className="inline-block mr-2 mb-1">
@@ -106,7 +106,7 @@ export function TokenDisplay({
           </div>
 
           {/* Warning */}
-          <div className="rounded-lg border border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 p-4">
+          <div className="rounded-lg border border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20 p-3">
             <h4 className="font-semibold mb-2 flex items-center">
               <span className="mr-2 text-xl">⚠️</span>
               Important Privacy Notice
