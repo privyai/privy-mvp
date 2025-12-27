@@ -3,7 +3,7 @@ import type { LanguageModel } from "ai";
 const mockResponses: Record<string, string> = {
   default: "This is a mock response for testing.",
   weather: "The weather in San Francisco is sunny and 72°F.",
-  greeting: "Hello! How can I help you today?",
+  greeting: "Welcome to Privy. What's on your mind?",
 };
 
 const mockUsage = {

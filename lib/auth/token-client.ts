@@ -6,6 +6,14 @@
 const TOKEN_STORAGE_KEY = "privy_access_token";
 const TOKEN_SEEN_KEY = "privy_token_seen"; // Has user seen their token?
 const TOKEN_EXISTS_KEY = "privy_has_token"; // Persistent flag in localStorage
+const TOKEN_LAST_ACTIVITY_KEY = "privy_last_activity"; // Last activity timestamp
+const TOKEN_CREATED_KEY = "privy_token_created"; // Token creation timestamp
+
+// Session grace period - if user returns within this time, no re-auth needed
+const SESSION_GRACE_PERIOD_MS = 150 * 1000; // 150 seconds
+
+// Free tier token expiry - 24 hours
+const FREE_TIER_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Generate a cryptographically secure token in the browser
@@ -26,6 +34,52 @@ export function storeToken(token: string): void {
   sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
   // Mark in localStorage that user has a token (persists across sessions)
   localStorage.setItem(TOKEN_EXISTS_KEY, "true");
+  // Record creation time for expiry checks
+  localStorage.setItem(TOKEN_CREATED_KEY, Date.now().toString());
+  // Update last activity
+  updateLastActivity();
+}
+
+/**
+ * Update last activity timestamp
+ */
+export function updateLastActivity(): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TOKEN_LAST_ACTIVITY_KEY, Date.now().toString());
+}
+
+/**
+ * Check if within session grace period (150 seconds)
+ */
+export function isWithinGracePeriod(): boolean {
+  if (typeof window === "undefined") return false;
+  const lastActivity = localStorage.getItem(TOKEN_LAST_ACTIVITY_KEY);
+  if (!lastActivity) return false;
+
+  const elapsed = Date.now() - parseInt(lastActivity, 10);
+  return elapsed < SESSION_GRACE_PERIOD_MS;
+}
+
+/**
+ * Check if free tier token has expired (24 hours)
+ */
+export function isTokenExpired(): boolean {
+  if (typeof window === "undefined") return false;
+  const created = localStorage.getItem(TOKEN_CREATED_KEY);
+  if (!created) return true; // No creation time = treat as expired
+
+  const elapsed = Date.now() - parseInt(created, 10);
+  return elapsed > FREE_TIER_EXPIRY_MS;
+}
+
+/**
+ * Get token age in milliseconds
+ */
+export function getTokenAge(): number {
+  if (typeof window === "undefined") return 0;
+  const created = localStorage.getItem(TOKEN_CREATED_KEY);
+  if (!created) return Infinity;
+  return Date.now() - parseInt(created, 10);
 }
 
 /**
@@ -44,6 +98,8 @@ export function clearToken(): void {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY);
   localStorage.removeItem(TOKEN_SEEN_KEY);
   localStorage.removeItem(TOKEN_EXISTS_KEY);
+  localStorage.removeItem(TOKEN_LAST_ACTIVITY_KEY);
+  localStorage.removeItem(TOKEN_CREATED_KEY);
 }
 
 /**

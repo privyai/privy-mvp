@@ -12,6 +12,9 @@ import {
   downloadTokenAsFile,
   importToken as importTokenUtil,
   isReturningUser,
+  isWithinGracePeriod,
+  isTokenExpired,
+  updateLastActivity,
 } from "@/lib/auth/token-client";
 
 export function useToken() {
@@ -25,6 +28,8 @@ export function useToken() {
     // Check for token in sessionStorage
     const storedToken = getStoredToken();
     const returning = isReturningUser();
+    const withinGrace = isWithinGracePeriod();
+    const expired = isTokenExpired();
 
     if (storedToken) {
       // Token exists in current session - use it
@@ -32,8 +37,18 @@ export function useToken() {
       setHasToken(true);
       setIsFirstTime(false);
       setNeedsImport(false);
-    } else if (returning) {
-      // Returning user, new session - needs to import token
+      updateLastActivity();
+    } else if (returning && withinGrace && !expired) {
+      // Returning user within 150s grace period - auto-generate (same behavior)
+      // They haven't been away long enough to need re-auth
+      const newToken = generateTokenClient();
+      storeToken(newToken);
+      setToken(newToken);
+      setHasToken(true);
+      setIsFirstTime(false);
+      setNeedsImport(false);
+    } else if (returning || expired) {
+      // Returning user after grace period OR token expired - needs to import
       setToken(null);
       setHasToken(false);
       setIsFirstTime(false);
