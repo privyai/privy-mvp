@@ -263,11 +263,10 @@ export function Chat({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Activate AI Gateway</AlertDialogTitle>
+            <AlertDialogTitle>Service Activation Required</AlertDialogTitle>
             <AlertDialogDescription>
-              This application requires{" "}
-              {process.env.NODE_ENV === "production" ? "the owner" : "you"} to
-              activate Vercel AI Gateway.
+              The AI service requires additional setup. Please contact support
+              or check your account configuration.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
