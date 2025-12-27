@@ -32,7 +32,7 @@ export const Greeting = () => {
       {/* Logo */}
       <motion.div
         animate={{ opacity: 1, scale: 1 }}
-        className="mb-6 flex justify-center"
+        className="mb-4 flex justify-center"
         exit={{ opacity: 0, scale: 0.9 }}
         initial={{ opacity: 0, scale: 0.9 }}
         transition={{ delay: 0.3 }}
@@ -49,7 +49,7 @@ export const Greeting = () => {
       {/* Welcome Message */}
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="mb-1 text-center font-semibold text-xl md:text-2xl"
+        className="mb-1 text-center font-semibold text-lg md:text-2xl"
         exit={{ opacity: 0, y: 10 }}
         initial={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.4 }}
@@ -58,7 +58,7 @@ export const Greeting = () => {
       </motion.div>
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="mb-2 text-center text-muted-foreground text-lg md:text-xl"
+        className="mb-2 text-center text-muted-foreground text-base md:text-xl"
         exit={{ opacity: 0, y: 10 }}
         initial={{ opacity: 0, y: 10 }}
         transition={{ delay: 0.5 }}
@@ -89,7 +89,7 @@ export const Greeting = () => {
           <motion.div
             key={mode.name}
             animate={{ opacity: 1, y: 0 }}
-            className="group rounded-lg border bg-card p-4 transition-colors hover:border-primary/20 hover:bg-accent/50"
+            className="group rounded-lg border bg-card p-3 transition-colors hover:border-primary/20 hover:bg-accent/50"
             exit={{ opacity: 0, y: 10 }}
             initial={{ opacity: 0, y: 10 }}
             transition={{ delay: 0.7 + index * 0.1 }}
