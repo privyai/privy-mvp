@@ -45,8 +45,22 @@ export async function authenticateToken(
     const tokenHash = hashToken(token);
 
     // Extract IP for rate limiting new account creation
+    // NOTE: This relies on Vercel's proxy to set x-forwarded-for correctly.
+    // The first IP in the chain is the client IP. While this can technically
+    // be spoofed if the proxy is misconfigured, Vercel strips client-provided
+    // forwarding headers, making this reasonably secure for best-effort rate limiting.
     const forwarded = request.headers.get("x-forwarded-for");
-    const ip = forwarded ? forwarded.split(",")[0] : "127.0.0.1";
+    const realIp = request.headers.get("x-real-ip");
+
+    let ip = "127.0.0.1"; // Default fallback
+
+    if (forwarded) {
+      // Take the first IP in the chain and trim whitespace
+      ip = forwarded.split(",")[0].trim();
+    } else if (realIp) {
+      ip = realIp.trim();
+    }
+
     const ipHash = hashIp(ip);
 
     // Get or create user (idempotent)

@@ -104,11 +104,19 @@ export async function checkIPRateLimit(ipHash: string): Promise<{
     const isExpired = Date.now() - rateLimit.lastGeneratedAt.getTime() > TWENTY_FOUR_HOURS;
 
     if (isExpired) {
-      // Reset count if 24h passed
+      // Reset count if 24h passed (atomic operation to prevent race conditions)
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(Date.now() - TWENTY_FOUR_HOURS);
+
       await db
         .update(ipRateLimit)
-        .set({ count: 0, lastGeneratedAt: new Date() })
-        .where(eq(ipRateLimit.ipHash, ipHash));
+        .set({ count: 0, lastGeneratedAt: now })
+        .where(
+          and(
+            eq(ipRateLimit.ipHash, ipHash),
+            lt(ipRateLimit.lastGeneratedAt, twentyFourHoursAgo)
+          )
+        );
       return { allowed: true, count: 0 };
     }
 
@@ -221,7 +229,7 @@ export async function getOrCreateTokenUser(
     const { allowed } = await checkIPRateLimit(ipHash);
     if (!allowed) {
       throw new ChatSDKError(
-        "rate_limit:chat",
+        "rate_limit:account_creation",
         "Too many accounts created from this IP today. Please try again later or contact support."
       );
     }
