@@ -45,7 +45,7 @@ export function ChatPreview() {
                         </div>
                     </div>
                     <Button
-                        className="pointer-events-none gap-1.5 bg-orange-600 text-white hover:bg-orange-700"
+                        className="pointer-events-none gap-1.5 bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:bg-orange-700 hover:shadow-[0_0_20px_rgba(234,88,12,0.6)]"
                         size="sm"
                         variant="destructive"
                     >
@@ -58,8 +58,8 @@ export function ChatPreview() {
                     {sampleMessages.map((msg, i) => (
                         <div
                             className={`rounded-lg p-3 text-sm ${msg.role === "assistant"
-                                    ? "bg-zinc-800 text-zinc-200"
-                                    : "ml-4 bg-zinc-700 text-zinc-100"
+                                ? "bg-zinc-800 text-zinc-200"
+                                : "ml-4 bg-zinc-700 text-zinc-100"
                                 }`}
                             key={i}
                         >
@@ -92,15 +92,7 @@ export function ChatPreview() {
                     </Button>
                 </div>
 
-                {/* Bottom disclaimer */}
-                <div className="mt-4 rounded-lg bg-zinc-800/50 p-3">
-                    <p className="text-zinc-400 text-xs">
-                        <span className="font-medium text-zinc-300">Not therapy.</span>{" "}
-                        Mental performance coaching for leaders.
-                        <br />
-                        Designed to be minimal, private, and calm.
-                    </p>
-                </div>
+
 
                 {/* Click hint overlay */}
                 <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/0 transition-all duration-300 group-hover:bg-black/20">
