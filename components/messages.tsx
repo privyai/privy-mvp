@@ -77,11 +77,22 @@ function PureMessages({
             />
           ))}
 
-          {/* Keep thinking indicator visible until assistant response has content.
-              This prevents UI gap during async streaming when waiting for first tokens. */}
+          {/* Keep thinking indicator visible until assistant response has visible text content.
+              This prevents UI gap during async streaming when waiting for first tokens,
+              especially with extended thinking models that send reasoning parts first. */}
           {(status === "submitted" ||
             (status === "streaming" &&
-              messages[messages.length - 1]?.role === "user")) &&
+              (() => {
+                const lastMessage = messages[messages.length - 1];
+                // Show thinking if last message is from user (no assistant response yet)
+                if (lastMessage?.role === "user") return true;
+                // Show thinking if assistant message has no text content yet
+                // (reasoning parts may exist but aren't visible in main content area)
+                const hasTextContent = lastMessage?.parts?.some(
+                  (p) => p.type === "text" && p.text?.trim()
+                );
+                return !hasTextContent;
+              })())) &&
             <ThinkingMessage />}
 
           <div
