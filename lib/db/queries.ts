@@ -81,77 +81,75 @@ export async function createGuestUser() {
 }
 
 /**
- * Check if an IP has exceeded its token generation limit (e.g., 5 tokens / 24h)
- * Returns { allowed: boolean, count: number }
+ * Atomically check and increment IP rate limit in a single operation
+ * Returns { allowed: boolean, newCount: number } where newCount is AFTER increment
+ * This eliminates race conditions by combining check + increment into one DB operation
  */
-export async function checkIPRateLimit(ipHash: string): Promise<{
+export async function checkAndIncrementIPRateLimit(ipHash: string): Promise<{
   allowed: boolean;
-  count: number;
+  newCount: number;
 }> {
-  const LIMIT = 5; // Allow 5 tokens per IP per 24 hours
-  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  const LIMIT = 5;
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
   try {
-    const [rateLimit] = await db
-      .select()
-      .from(ipRateLimit)
-      .where(eq(ipRateLimit.ipHash, ipHash));
-
-    if (!rateLimit) {
-      return { allowed: true, count: 0 };
-    }
-
-    const isExpired = Date.now() - rateLimit.lastGeneratedAt.getTime() > TWENTY_FOUR_HOURS;
-
-    if (isExpired) {
-      // Reset count if 24h passed (atomic operation to prevent race conditions)
+    // Use INSERT ON CONFLICT for atomic check-and-increment
+    const result = await db.transaction(async (tx) => {
       const now = new Date();
-      const twentyFourHoursAgo = new Date(Date.now() - TWENTY_FOUR_HOURS);
 
-      await db
+      // Try to get existing record with FOR UPDATE lock
+      const [existing] = await tx
+        .select()
+        .from(ipRateLimit)
+        .where(eq(ipRateLimit.ipHash, ipHash))
+        .for("update");
+
+      if (!existing) {
+        // First time seeing this IP - create with count=1
+        const [inserted] = await tx
+          .insert(ipRateLimit)
+          .values({
+            ipHash,
+            count: 1,
+            lastGeneratedAt: now,
+          })
+          .returning();
+        return { count: inserted.count, lastGeneratedAt: inserted.lastGeneratedAt };
+      }
+
+      // Check if the window has expired
+      const isExpired = Date.now() - existing.lastGeneratedAt.getTime() > TWENTY_FOUR_HOURS_MS;
+
+      if (isExpired) {
+        // Reset to 1 (new 24h window)
+        const [reset] = await tx
+          .update(ipRateLimit)
+          .set({ count: 1, lastGeneratedAt: now })
+          .where(eq(ipRateLimit.ipHash, ipHash))
+          .returning();
+        return { count: reset.count, lastGeneratedAt: reset.lastGeneratedAt };
+      }
+
+      // Increment existing count
+      const [updated] = await tx
         .update(ipRateLimit)
-        .set({ count: 0, lastGeneratedAt: now })
-        .where(
-          and(
-            eq(ipRateLimit.ipHash, ipHash),
-            lt(ipRateLimit.lastGeneratedAt, twentyFourHoursAgo)
-          )
-        );
-      return { allowed: true, count: 0 };
-    }
+        .set({ count: existing.count + 1 })
+        .where(eq(ipRateLimit.ipHash, ipHash))
+        .returning();
+      return { count: updated.count, lastGeneratedAt: updated.lastGeneratedAt };
+    });
 
-    return { allowed: rateLimit.count < LIMIT, count: rateLimit.count };
-  } catch (_error) {
-    // Fail safe: allow if DB check fails, but log it
-    console.warn("Failed to check IP rate limit:", _error);
-    return { allowed: true, count: 0 };
-  }
-}
-
-/**
- * Increment the token generation count for an IP
- */
-export async function incrementIPRateLimit(ipHash: string): Promise<void> {
-  try {
-    const [existing] = await db
-      .select()
-      .from(ipRateLimit)
-      .where(eq(ipRateLimit.ipHash, ipHash));
-
-    if (!existing) {
-      await db.insert(ipRateLimit).values({
-        ipHash,
-        count: 1,
-        lastGeneratedAt: new Date(),
-      });
-    } else {
-      await db
-        .update(ipRateLimit)
-        .set({ count: existing.count + 1, lastGeneratedAt: new Date() })
-        .where(eq(ipRateLimit.ipHash, ipHash));
-    }
-  } catch (_error) {
-    console.warn("Failed to increment IP rate limit:", _error);
+    return {
+      allowed: result.count <= LIMIT,
+      newCount: result.count,
+    };
+  } catch (error) {
+    // HARD FAILURE - Don't allow account creation if we can't track it
+    console.error("Failed to check/increment IP rate limit:", error);
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Unable to verify rate limit. Please try again."
+    );
   }
 }
 
@@ -224,17 +222,15 @@ export async function getOrCreateTokenUser(
     return existingUser;
   }
 
-  // NEW USER - Check IP rate limit if provided
+  // NEW USER - Atomically check and increment IP rate limit
   if (ipHash) {
-    const { allowed } = await checkIPRateLimit(ipHash);
+    const { allowed, newCount } = await checkAndIncrementIPRateLimit(ipHash);
     if (!allowed) {
       throw new ChatSDKError(
         "rate_limit:account_creation",
-        "Too many accounts created from this IP today. Please try again later or contact support."
+        `Too many accounts created from this IP address. You have created ${newCount} accounts in the last 24 hours (limit: 5). Please try again later or contact support.`
       );
     }
-    // Increment count for new account
-    await incrementIPRateLimit(ipHash);
   }
 
   // Create new user
