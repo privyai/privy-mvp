@@ -2,12 +2,20 @@ import { MoveRight } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ChatPreview } from "@/components/chat-preview";
 import { PrivacyFlowDiagram } from "@/components/privacy-flow-diagram";
 
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Header with Theme Toggle */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto flex h-14 max-w-7xl items-center justify-end px-4">
+          <ThemeToggle />
+        </div>
+      </header>
+
       {/* Hero Section - Two Column Layout */}
       <section className="flex flex-1 items-center px-4 py-16 lg:py-20">
         <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-2 lg:gap-16">
