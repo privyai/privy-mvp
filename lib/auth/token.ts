@@ -31,6 +31,29 @@ export function hashToken(token: string): string {
 }
 
 /**
+ * Hash an IP address with a secret salt
+ * Uses SHA-256 for privacy (original IP is never stored)
+ */
+export function hashIp(ip: string): string {
+  const salt = process.env.IP_SALT;
+
+  // Enforce IP_SALT in production for security
+  if (!salt && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "IP_SALT environment variable is required in production. " +
+      "Generate one with: openssl rand -base64 32"
+    );
+  }
+
+  // Use default salt only in development/testing
+  const effectiveSalt = salt || "privy-default-salt-change-in-prod";
+
+  return createHash("sha256")
+    .update(`${ip}:${effectiveSalt}`)
+    .digest("hex");
+}
+
+/**
  * Validate token format (client and server side)
  */
 export function isValidTokenFormat(token: string): boolean {

@@ -2,6 +2,8 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
+  index,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -18,6 +20,7 @@ export const user = pgTable("User", {
   password: varchar("password", { length: 64 }),
   // Zero-trust token auth (new approach)
   tokenHash: varchar("tokenHash", { length: 64 }).unique(),
+  plan: varchar("plan", { length: 32 }).notNull().default("free"),
   // Metadata
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   lastActiveAt: timestamp("lastActiveAt"),
@@ -53,16 +56,30 @@ export const messageDeprecated = pgTable("Message", {
 
 export type MessageDeprecated = InferSelectModel<typeof messageDeprecated>;
 
-export const message = pgTable("Message_v2", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  chatId: uuid("chatId")
-    .notNull()
-    .references(() => chat.id),
-  role: varchar("role").notNull(),
-  parts: json("parts").notNull(),
-  attachments: json("attachments").notNull(),
-  createdAt: timestamp("createdAt").notNull(),
-});
+export const message = pgTable(
+  "Message_v2",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    chatId: uuid("chatId")
+      .notNull()
+      .references(() => chat.id),
+    role: varchar("role").notNull(),
+    parts: json("parts").notNull(),
+    attachments: json("attachments").notNull(),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => ({
+    // Indexes for rate limiting queries
+    chatCreatedIdx: index("idx_message_chat_created").on(
+      table.chatId,
+      table.createdAt
+    ),
+    roleCreatedIdx: index("idx_message_role_created").on(
+      table.role,
+      table.createdAt
+    ),
+  })
+);
 
 export type DBMessage = InferSelectModel<typeof message>;
 
@@ -174,3 +191,20 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+export const ipRateLimit = pgTable(
+  "IPRateLimit",
+  {
+    ipHash: varchar("ipHash", { length: 64 }).primaryKey(),
+    count: integer("count").notNull().default(0),
+    lastGeneratedAt: timestamp("lastGeneratedAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    // Index for timestamp-based expiry checks
+    timestampIdx: index("idx_ip_rate_limit_timestamp").on(
+      table.lastGeneratedAt
+    ),
+  })
+);
+
+export type IPRateLimit = InferSelectModel<typeof ipRateLimit>;

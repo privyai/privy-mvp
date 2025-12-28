@@ -66,16 +66,17 @@ export const Greeting = () => {
         What's on your mind?
       </motion.div>
 
-      {/* Privacy Footer moved here for mobile */}
-      <motion.p
+      {/* Limit info and Privacy Footer */}
+      <motion.div
         animate={{ opacity: 1 }}
-        className="mb-4 text-center text-muted-foreground text-[10px] md:text-xs"
+        className="mb-4 flex flex-col items-center gap-1 text-center text-muted-foreground text-[10px] md:text-xs"
         exit={{ opacity: 0 }}
         initial={{ opacity: 0 }}
         transition={{ delay: 0.55 }}
       >
-        Zero-trust privacy • Your token = your identity • Burn sessions anytime
-      </motion.p>
+        <p>Free Tier: 10 chats • 30 messages/day</p>
+        <p>Zero-trust privacy • Your token = your identity • Burn sessions anytime</p>
+      </motion.div>
 
       {/* Coaching Modes */}
       <motion.div

@@ -197,7 +197,11 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1 text-green-500">✓</span>
-                  <span>30 messages per day</span>
+                  <span>30 messages per day (free tier)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 text-green-500">✓</span>
+                  <span>Up to 10 chats per token</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1 text-green-500">✓</span>
@@ -244,7 +248,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1 text-green-500">✓</span>
-                  <span>Unlimited messages</span>
+                  <span>Unlimited messages and chats</span>
                 </li>
               </ul>
 
