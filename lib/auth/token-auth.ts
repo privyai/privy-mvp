@@ -47,6 +47,16 @@ export async function authenticateToken(
     // Get or create user (idempotent)
     const user = await getOrCreateTokenUser(tokenHash);
 
+    // Check token expiry (24 hours)
+    const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+    if (user.createdAt) {
+      const tokenAge = Date.now() - new Date(user.createdAt).getTime();
+      if (tokenAge > TOKEN_EXPIRY_MS) {
+        console.warn(`Token expired for user ${user.id}`);
+        return null;
+      }
+    }
+
     return user;
   } catch (error) {
     console.error("Token authentication error:", error);

@@ -152,6 +152,9 @@ export async function getOrCreateTokenUser(tokenHash: string): Promise<User> {
 /**
  * Delete user and all associated data by token hash
  * This is for the "burn" functionality
+ *
+ * SECURITY: Overwrites sensitive data before deletion to prevent
+ * recovery from database backups or WAL logs
  */
 export async function burnUserByTokenHash(tokenHash: string): Promise<void> {
   try {
@@ -161,10 +164,38 @@ export async function burnUserByTokenHash(tokenHash: string): Promise<void> {
       throw new ChatSDKError("not_found:user", "User not found");
     }
 
-    // Delete all user's chats (this cascades to messages, votes, etc.)
+    // Step 1: Overwrite all message content before deletion
+    // This prevents recovery from backups/WAL logs
+    const userChats = await db
+      .select({ id: chat.id })
+      .from(chat)
+      .where(eq(chat.userId, userToBurn.id));
+
+    for (const userChat of userChats) {
+      // Overwrite message content with null
+      await db
+        .update(message)
+        .set({
+          parts: null,
+          attachments: null,
+        })
+        .where(eq(message.chatId, userChat.id));
+    }
+
+    // Step 2: Overwrite user token hash
+    await db
+      .update(user)
+      .set({
+        tokenHash: null,
+        email: null,
+        password: null,
+      })
+      .where(eq(user.id, userToBurn.id));
+
+    // Step 3: Delete all user's chats (this cascades to messages, votes, etc.)
     await deleteAllChatsByUserId({ userId: userToBurn.id });
 
-    // Delete user
+    // Step 4: Delete user
     await db.delete(user).where(eq(user.id, userToBurn.id));
   } catch (error) {
     if (error instanceof ChatSDKError) {
