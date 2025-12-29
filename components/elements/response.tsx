@@ -42,9 +42,10 @@ const CascadeText = memo(
     }, [text, displayedLength]);
 
     // Reset on new message
+    // Reset on new message
     useEffect(() => {
-      if (text.length < displayedLength) setDisplayedLength(0);
-    }, [text, displayedLength]);
+      setDisplayedLength(0);
+    }, [text]);
 
     return (
       <span className={cn("whitespace-pre-wrap", className)}>
