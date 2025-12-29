@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -10,9 +10,26 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
-    // Use next-themes for theme management
+    const [mounted, setMounted] = useState(false);
     const { resolvedTheme, setTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
+
+    // Prevent hydration mismatch by only rendering after mount
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Return placeholder with same dimensions during SSR
+    if (!mounted) {
+        return (
+            <div
+                className={cn(
+                    "flex w-16 h-8 p-1 rounded-full transition-all duration-300 bg-zinc-950 border border-zinc-800",
+                    className
+                )}
+            />
+        );
+    }
 
     return (
         <div
