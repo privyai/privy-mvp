@@ -29,7 +29,7 @@ const CascadeText = memo(
             const remaining = text.length - prev;
             // Accelerate when behind, slow when caught up
             const charsToAdd = Math.min(Math.max(3, remaining / 10), 8);
-            return Math.min(prev + charsToAdd, text.length);
+            return Math.min(Math.floor(prev + charsToAdd), text.length);
           });
         }
         animationRef.current = requestAnimationFrame(animate);
