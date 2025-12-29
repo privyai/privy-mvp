@@ -1,4 +1,9 @@
-import { createUIMessageStream, JsonToSseTransformStream } from "ai";
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  JsonToSseTransformStream,
+  UI_MESSAGE_STREAM_HEADERS,
+} from "ai";
 import { differenceInSeconds } from "date-fns";
 import { authenticateToken } from "@/lib/auth/token-auth";
 import {
@@ -80,17 +85,26 @@ export async function GET(
     const mostRecentMessage = messages.at(-1);
 
     if (!mostRecentMessage) {
-      return new Response(emptyDataStream, { status: 200 });
+      return createUIMessageStreamResponse({
+        stream: emptyDataStream,
+        status: 200,
+      });
     }
 
     if (mostRecentMessage.role !== "assistant") {
-      return new Response(emptyDataStream, { status: 200 });
+      return createUIMessageStreamResponse({
+        stream: emptyDataStream,
+        status: 200,
+      });
     }
 
     const messageCreatedAt = new Date(mostRecentMessage.createdAt);
 
     if (differenceInSeconds(resumeRequestedAt, messageCreatedAt) > 15) {
-      return new Response(emptyDataStream, { status: 200 });
+      return createUIMessageStreamResponse({
+        stream: emptyDataStream,
+        status: 200,
+      });
     }
 
     const restoredStream = createUIMessageStream<ChatMessage>({
@@ -103,11 +117,14 @@ export async function GET(
       },
     });
 
-    return new Response(
-      restoredStream.pipeThrough(new JsonToSseTransformStream()),
-      { status: 200 }
-    );
+    return createUIMessageStreamResponse({
+      stream: restoredStream,
+      status: 200,
+    });
   }
 
-  return new Response(stream, { status: 200 });
+  return new Response(stream, {
+    status: 200,
+    headers: UI_MESSAGE_STREAM_HEADERS,
+  });
 }

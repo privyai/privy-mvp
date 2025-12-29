@@ -132,7 +132,9 @@ const PurePreviewMessage = ({
                           : undefined
                       }
                     >
-                      <Response>{sanitizeText(part.text)}</Response>
+                      <Response isStreaming={isLoading}>
+                        {sanitizeText(part.text)}
+                      </Response>
                     </MessageContent>
                   </div>
                 );
