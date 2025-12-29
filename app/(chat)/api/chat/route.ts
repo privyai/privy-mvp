@@ -1,9 +1,11 @@
 import {
   convertToModelMessages,
   createUIMessageStream,
+  createUIMessageStreamResponse,
   JsonToSseTransformStream,
   stepCountIs,
   streamText,
+  UI_MESSAGE_STREAM_HEADERS,
 } from "ai";
 import { after } from "next/server";
 import {
@@ -301,14 +303,16 @@ export async function POST(request: Request) {
           () => stream.pipeThrough(new JsonToSseTransformStream())
         );
         if (resumableStream) {
-          return new Response(resumableStream);
+          return new Response(resumableStream, {
+            headers: UI_MESSAGE_STREAM_HEADERS,
+          });
         }
       } catch (error) {
         console.error("Failed to create resumable stream:", error);
       }
     }
 
-    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
+    return createUIMessageStreamResponse({ stream });
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");
 
