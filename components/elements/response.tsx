@@ -89,7 +89,7 @@ export const Response = memo(
         mode="static"
         {...props}
       >
-        {children}
+        {cleanText}
       </Streamdown>
     );
   },
