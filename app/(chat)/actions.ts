@@ -22,12 +22,18 @@ export async function generateTitleFromUserMessage({
 }: {
   message: UIMessage;
 }) {
-  const { text: title } = await generateText({
+  const { text: rawTitle } = await generateText({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     model: getTitleModel() as any,
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
+
+  // Strip out <think> tokens that some models output
+  const title = rawTitle
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<think>[\s\S]*/gi, "") // Handle unclosed think tags
+    .trim();
 
   return title;
 }
