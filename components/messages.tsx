@@ -89,7 +89,9 @@ function PureMessages({
                 // Show thinking if assistant message has no text content yet
                 // (reasoning parts may exist but aren't visible in main content area)
                 const hasTextContent = lastMessage?.parts?.some(
-                  (p) => p.type === "text" && p.text?.trim()
+                  (p) =>
+                    p.type === "text" &&
+                    p.text?.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "").trim()
                 );
                 return !hasTextContent;
               })())) &&

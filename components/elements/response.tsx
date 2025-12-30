@@ -42,10 +42,9 @@ const CascadeText = memo(
     }, [text, displayedLength]);
 
     // Reset on new message
-    // Reset on new message
     useEffect(() => {
-      setDisplayedLength(0);
-    }, [text]);
+      if (text.length < displayedLength) setDisplayedLength(0);
+    }, [text, displayedLength]);
 
     return (
       <span className={cn("whitespace-pre-wrap", className)}>
@@ -63,8 +62,11 @@ export const Response = memo(
   ({ className, isStreaming = false, children, ...props }: ResponseProps) => {
     const text = typeof children === "string" ? children : "";
 
+    // Filter out <think> tags for display
+    const cleanText = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "").trim();
+
     // During streaming: use CascadeText for smooth character animation
-    if (isStreaming && text) {
+    if (isStreaming && cleanText) {
       return (
         <div
           className={cn(
@@ -72,7 +74,7 @@ export const Response = memo(
             className
           )}
         >
-          <CascadeText className="text-foreground" text={text} />
+          <CascadeText className="text-foreground" text={cleanText} />
         </div>
       );
     }
