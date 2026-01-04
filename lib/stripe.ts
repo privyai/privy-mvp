@@ -1,10 +1,27 @@
 import "server-only";
 import Stripe from "stripe";
 
-// Initialize Stripe client
-// biome-ignore lint: Forbidden non-null assertion.
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-12-15.clover",
+// Lazy initialization to avoid build-time errors when env vars aren't available
+let _stripe: Stripe | null = null;
+
+function getStripeClient(): Stripe {
+    if (!_stripe) {
+        const secretKey = process.env.STRIPE_SECRET_KEY;
+        if (!secretKey) {
+            throw new Error("STRIPE_SECRET_KEY environment variable is not configured");
+        }
+        _stripe = new Stripe(secretKey, {
+            apiVersion: "2025-12-15.clover",
+        });
+    }
+    return _stripe;
+}
+
+// Export getter for stripe client (lazy loaded)
+export const stripe = new Proxy({} as Stripe, {
+    get(_, prop) {
+        return (getStripeClient() as any)[prop];
+    },
 });
 
 // Price ID for premium subscription ($30/month)
