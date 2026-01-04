@@ -103,13 +103,18 @@ export function SidebarHistory() {
   const { user } = useTokenContext();
   const id = pathname?.startsWith("/chat/") ? pathname.split("/")[2] : null;
 
+  // Only fetch when user is authenticated - return null to skip fetching
+  const getKey = user
+    ? getChatHistoryPaginationKey
+    : () => null;
+
   const {
     data: paginatedChatHistories,
     setSize,
     isValidating,
     isLoading,
     mutate,
-  } = useSWRInfinite<ChatHistory>(getChatHistoryPaginationKey, fetcher, {
+  } = useSWRInfinite<ChatHistory>(getKey, fetcher, {
     fallbackData: [],
   });
 
