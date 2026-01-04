@@ -44,7 +44,11 @@ import {
 // https://authjs.dev/reference/adapter/drizzle
 
 // biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
+const client = postgres(process.env.POSTGRES_URL!, {
+  max: 1, // Serverless: limit connections per instance
+  idle_timeout: 20, // Close idle connections after 20s
+  connect_timeout: 10, // Connection timeout
+});
 const db = drizzle(client);
 // ============================================
 // Zero-Trust Token Authentication Functions
