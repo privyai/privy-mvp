@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -21,6 +22,11 @@ export const user = pgTable("User", {
   // Metadata
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   lastActiveAt: timestamp("lastActiveAt"),
+  // Subscription fields (Stripe integration)
+  plan: varchar("plan", { length: 16 }).default("free"),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  trialEndsAt: timestamp("trialEndsAt"),
+  promoCode: varchar("promoCode", { length: 32 }),
 });
 
 export type User = InferSelectModel<typeof user>;
@@ -174,3 +180,58 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// Global Memory - stores conversation insights for cross-session context
+// Simple text storage with recency-based retrieval (no vector embeddings)
+export const globalMemory = pgTable("GlobalMemory", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  chatId: uuid("chatId").references(() => chat.id, { onDelete: "set null" }),
+  content: text("content").notNull(), // The insight/summary text
+  contentType: varchar("contentType", { length: 16 })
+    .notNull()
+    .default("insight"), // insight, goal, theme, etc.
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  expiresAt: timestamp("expiresAt"), // For auto-vanish feature
+});
+
+export type GlobalMemory = InferSelectModel<typeof globalMemory>;
+
+// User Settings - Premium feature configuration
+export const userSettings = pgTable("UserSettings", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  // Global Memory settings
+  globalMemoryEnabled: boolean("globalMemoryEnabled").notNull().default(true),
+  // Auto-vanish settings
+  autoVanishEnabled: boolean("autoVanishEnabled").notNull().default(false),
+  autoVanishDays: integer("autoVanishDays").notNull().default(30),
+  // Hard-burn mode - immediate permanent deletion
+  hardBurnEnabled: boolean("hardBurnEnabled").notNull().default(false),
+  // Timestamps
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type UserSettings = InferSelectModel<typeof userSettings>;
+
+// Subscription Events - Track subscription changes for analytics
+export const subscriptionEvent = pgTable("SubscriptionEvent", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  eventType: varchar("eventType", { length: 32 }).notNull(), // checkout_completed, subscription_canceled, trial_started, etc.
+  previousPlan: varchar("previousPlan", { length: 16 }),
+  newPlan: varchar("newPlan", { length: 16 }),
+  stripeEventId: varchar("stripeEventId", { length: 64 }), // For deduplication
+  metadata: json("metadata"), // Extra event data
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type SubscriptionEvent = InferSelectModel<typeof subscriptionEvent>;

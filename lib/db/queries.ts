@@ -23,12 +23,17 @@ import {
   chat,
   type DBMessage,
   document,
+  type GlobalMemory,
+  globalMemory,
   message,
+  subscriptionEvent,
   type Suggestion,
   stream,
   suggestion,
   type User,
   user,
+  type UserSettings,
+  userSettings,
   vote,
 } from "./schema";
 import { generateHashedPassword } from "./utils";
@@ -171,6 +176,131 @@ export async function burnUserByTokenHash(tokenHash: string): Promise<void> {
       throw error;
     }
     throw new ChatSDKError("bad_request:database", "Failed to burn user");
+  }
+}
+
+// ============================================
+// Subscription & Premium Functions
+// ============================================
+
+export type PlanType = "free" | "trial" | "premium";
+
+/**
+ * Get user's current subscription plan
+ */
+export async function getUserPlan(userId: string): Promise<PlanType> {
+  try {
+    const [result] = await db
+      .select({ plan: user.plan, trialEndsAt: user.trialEndsAt })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    if (!result) return "free";
+
+    // Check if trial has expired
+    if (result.plan === "trial" && result.trialEndsAt) {
+      if (new Date() > result.trialEndsAt) {
+        // Trial expired, revert to free
+        await db
+          .update(user)
+          .set({ plan: "free" })
+          .where(eq(user.id, userId));
+        return "free";
+      }
+    }
+
+    return (result.plan as PlanType) || "free";
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to get user plan");
+  }
+}
+
+/**
+ * Update user's subscription plan
+ */
+export async function updateUserPlan(
+  userId: string,
+  plan: PlanType
+): Promise<void> {
+  try {
+    await db.update(user).set({ plan }).where(eq(user.id, userId));
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to update user plan");
+  }
+}
+
+/**
+ * Check if user has premium access (premium or active trial)
+ */
+export async function isPremiumUser(userId: string): Promise<boolean> {
+  const plan = await getUserPlan(userId);
+  return plan === "premium" || plan === "trial";
+}
+
+/**
+ * Activate trial for user with promo code
+ * Trial lasts 7 days
+ */
+export async function activateTrial(
+  userId: string,
+  promoCode: string
+): Promise<{ success: boolean; trialEndsAt: Date }> {
+  try {
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 7); // 7-day trial
+
+    await db
+      .update(user)
+      .set({
+        plan: "trial",
+        promoCode,
+        trialEndsAt,
+      })
+      .where(eq(user.id, userId));
+
+    return { success: true, trialEndsAt };
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to activate trial");
+  }
+}
+
+/**
+ * Link Stripe customer ID to user
+ */
+export async function linkStripeCustomer(
+  userId: string,
+  stripeCustomerId: string
+): Promise<void> {
+  try {
+    await db
+      .update(user)
+      .set({ stripeCustomerId })
+      .where(eq(user.id, userId));
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to link Stripe customer"
+    );
+  }
+}
+
+/**
+ * Get user by Stripe customer ID
+ */
+export async function getUserByStripeCustomerId(
+  stripeCustomerId: string
+): Promise<User | null> {
+  try {
+    const [result] = await db
+      .select()
+      .from(user)
+      .where(eq(user.stripeCustomerId, stripeCustomerId));
+    return result || null;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user by Stripe customer ID"
+    );
   }
 }
 
@@ -707,6 +837,385 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to get stream ids by chat id"
+    );
+  }
+}
+
+// ============================================
+// User Settings Functions (Premium)
+// ============================================
+
+/**
+ * Get user settings, returns null if not found
+ */
+export async function getUserSettings(
+  userId: string
+): Promise<UserSettings | null> {
+  try {
+    const [result] = await db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId));
+    return result || null;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get user settings"
+    );
+  }
+}
+
+/**
+ * Get or create user settings with defaults
+ */
+export async function getOrCreateUserSettings(
+  userId: string
+): Promise<UserSettings> {
+  try {
+    const existing = await getUserSettings(userId);
+    if (existing) return existing;
+
+    const [created] = await db
+      .insert(userSettings)
+      .values({ userId })
+      .returning();
+    return created;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get or create user settings"
+    );
+  }
+}
+
+/**
+ * Update user settings
+ */
+export async function updateUserSettings(
+  userId: string,
+  settings: Partial<{
+    globalMemoryEnabled: boolean;
+    autoVanishEnabled: boolean;
+    autoVanishDays: number;
+    hardBurnEnabled: boolean;
+  }>
+): Promise<UserSettings> {
+  try {
+    // Ensure settings exist first
+    await getOrCreateUserSettings(userId);
+
+    const [updated] = await db
+      .update(userSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(userSettings.userId, userId))
+      .returning();
+    return updated;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to update user settings"
+    );
+  }
+}
+
+// ============================================
+// Global Memory Functions (Premium)
+// ============================================
+
+/**
+ * Save a memory entry (simple text, no embeddings)
+ */
+export async function saveMemory({
+  userId,
+  chatId,
+  content,
+  contentType = "insight",
+  expiresAt,
+}: {
+  userId: string;
+  chatId?: string;
+  content: string;
+  contentType?: string;
+  expiresAt?: Date;
+}): Promise<GlobalMemory> {
+  try {
+    const [result] = await db
+      .insert(globalMemory)
+      .values({
+        userId,
+        chatId,
+        content,
+        contentType,
+        expiresAt,
+      })
+      .returning();
+    return result;
+  } catch (_error) {
+    throw new ChatSDKError("bad_request:database", "Failed to save memory");
+  }
+}
+
+/**
+ * Search memories using simple keyword matching + recency
+ * Fast hybrid search: full-text search combined with recency ordering
+ */
+export async function searchMemories(
+  userId: string,
+  query?: string,
+  limit = 5
+): Promise<Array<{ id: string; content: string; contentType: string; createdAt: Date }>> {
+  try {
+    if (query && query.trim().length > 2) {
+      // Hybrid search: keyword matching + recency
+      const result = await client`
+        SELECT id, content, "contentType", "createdAt"
+        FROM "GlobalMemory"
+        WHERE "userId" = ${userId}
+          AND (
+            to_tsvector('english', content) @@ plainto_tsquery('english', ${query})
+            OR content ILIKE ${"%" + query + "%"}
+          )
+        ORDER BY "createdAt" DESC
+        LIMIT ${limit}
+      `;
+      return result.map((row) => ({
+        id: row.id as string,
+        content: row.content as string,
+        contentType: row.contentType as string,
+        createdAt: row.createdAt as Date,
+      }));
+    }
+
+    // No query - just return most recent memories
+    const result = await client`
+      SELECT id, content, "contentType", "createdAt"
+      FROM "GlobalMemory"
+      WHERE "userId" = ${userId}
+      ORDER BY "createdAt" DESC
+      LIMIT ${limit}
+    `;
+    return result.map((row) => ({
+      id: row.id as string,
+      content: row.content as string,
+      contentType: row.contentType as string,
+      createdAt: row.createdAt as Date,
+    }));
+  } catch (error) {
+    console.error("Memory search error:", error);
+    return [];
+  }
+}
+
+/**
+ * Search memories by vector similarity using pgvector
+ * Uses cosine distance for similarity calculation
+ */
+export async function searchMemoriesByVector(
+  userId: string,
+  embedding: number[],
+  limit = 5,
+  threshold = 0.7
+): Promise<Array<{ id: string; content: string; similarity: number; contentType: string; createdAt: Date }>> {
+  try {
+    // Use raw SQL for vector similarity search with pgvector
+    const result = await client`
+      SELECT
+        id,
+        content,
+        "contentType",
+        "createdAt",
+        1 - (embedding <=> ${JSON.stringify(embedding)}::vector) as similarity
+      FROM "GlobalMemory"
+      WHERE "userId" = ${userId}
+        AND embedding IS NOT NULL
+        AND 1 - (embedding <=> ${JSON.stringify(embedding)}::vector) > ${threshold}
+      ORDER BY embedding <=> ${JSON.stringify(embedding)}::vector
+      LIMIT ${limit}
+    `;
+
+    return result.map((row) => ({
+      id: row.id as string,
+      content: row.content as string,
+      contentType: row.contentType as string,
+      createdAt: row.createdAt as Date,
+      similarity: Number(row.similarity),
+    }));
+  } catch (error) {
+    console.error("Vector search error:", error);
+    // Return empty array on error (non-blocking)
+    return [];
+  }
+}
+
+/**
+ * Get recent memories for a user (without vector search)
+ */
+export async function getRecentMemories(
+  userId: string,
+  limit = 10
+): Promise<GlobalMemory[]> {
+  try {
+    return await db
+      .select()
+      .from(globalMemory)
+      .where(eq(globalMemory.userId, userId))
+      .orderBy(desc(globalMemory.createdAt))
+      .limit(limit);
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to get recent memories"
+    );
+  }
+}
+
+/**
+ * Delete all memories for a user
+ */
+export async function deleteUserMemories(userId: string): Promise<void> {
+  try {
+    await db.delete(globalMemory).where(eq(globalMemory.userId, userId));
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to delete user memories"
+    );
+  }
+}
+
+/**
+ * Delete expired memories (for auto-vanish cleanup)
+ */
+export async function deleteExpiredMemories(): Promise<number> {
+  try {
+    const result = await db
+      .delete(globalMemory)
+      .where(lt(globalMemory.expiresAt, new Date()))
+      .returning({ id: globalMemory.id });
+    return result.length;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to delete expired memories"
+    );
+  }
+}
+
+/**
+ * Delete memories for a specific chat
+ */
+export async function deleteMemoriesByChatId(chatId: string): Promise<void> {
+  try {
+    await db.delete(globalMemory).where(eq(globalMemory.chatId, chatId));
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to delete memories by chat id"
+    );
+  }
+}
+
+// ============================================
+// Subscription Event Functions
+// ============================================
+
+/**
+ * Log a subscription event
+ */
+export async function logSubscriptionEvent({
+  userId,
+  eventType,
+  previousPlan,
+  newPlan,
+  stripeEventId,
+  metadata,
+}: {
+  userId: string;
+  eventType: string;
+  previousPlan?: string;
+  newPlan?: string;
+  stripeEventId?: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await db.insert(subscriptionEvent).values({
+      userId,
+      eventType,
+      previousPlan,
+      newPlan,
+      stripeEventId,
+      metadata,
+    });
+  } catch (_error) {
+    // Non-blocking - just log the error
+    console.error("Failed to log subscription event:", _error);
+  }
+}
+
+/**
+ * Check if a Stripe event has already been processed (idempotency)
+ */
+export async function isStripeEventProcessed(
+  stripeEventId: string
+): Promise<boolean> {
+  try {
+    const [result] = await db
+      .select({ id: subscriptionEvent.id })
+      .from(subscriptionEvent)
+      .where(eq(subscriptionEvent.stripeEventId, stripeEventId))
+      .limit(1);
+    return !!result;
+  } catch (_error) {
+    return false;
+  }
+}
+
+// ============================================
+// Auto-Vanish Cleanup Functions
+// ============================================
+
+/**
+ * Delete expired chats for users with auto-vanish enabled
+ */
+export async function deleteExpiredChatsForAutoVanish(): Promise<number> {
+  try {
+    // Get users with auto-vanish enabled
+    const usersWithAutoVanish = await db
+      .select({
+        userId: userSettings.userId,
+        autoVanishDays: userSettings.autoVanishDays,
+      })
+      .from(userSettings)
+      .where(eq(userSettings.autoVanishEnabled, true));
+
+    let totalDeleted = 0;
+
+    for (const userConfig of usersWithAutoVanish) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - userConfig.autoVanishDays);
+
+      // Get chats to delete
+      const chatsToDelete = await db
+        .select({ id: chat.id })
+        .from(chat)
+        .where(
+          and(
+            eq(chat.userId, userConfig.userId),
+            lt(chat.createdAt, cutoffDate)
+          )
+        );
+
+      for (const chatToDelete of chatsToDelete) {
+        await deleteChatById({ id: chatToDelete.id });
+        totalDeleted++;
+      }
+    }
+
+    return totalDeleted;
+  } catch (_error) {
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Failed to delete expired chats"
     );
   }
 }

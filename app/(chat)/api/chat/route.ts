@@ -29,11 +29,16 @@ import {
   getChatCountByUserId,
   getMessageCountByUserId,
   getMessagesByChatId,
+  getUserSettings,
+  isPremiumUser,
   saveChat,
+  saveMemory,
   saveMessages,
+  searchMemories,
   updateChatTitleById,
   updateMessage,
 } from "@/lib/db/queries";
+import { generateConversationSummary } from "@/lib/ai/embeddings";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
@@ -92,15 +97,18 @@ export async function POST(request: Request) {
       differenceInHours: 24,
     });
 
-    // All token users have the same rate limit (50 messages/day)
-    const maxMessages = 50;
+    // Check if user has premium access (premium or active trial)
+    const hasPremium = await isPremiumUser(user.id);
+
+    // Premium users have unlimited messages, free users capped at 50/day
+    const maxMessages = hasPremium ? Number.POSITIVE_INFINITY : 50;
     const isAllowed = messageCount <= maxMessages;
 
     // Log rate limit check to Logfire (with hashed user ID for privacy)
     logRateLimitCheck({
       userId: hashToken(user.id), // Hash user ID before logging
       messageCount,
-      limit: maxMessages,
+      limit: hasPremium ? -1 : 50, // -1 indicates unlimited
       allowed: isAllowed,
     });
 
@@ -124,11 +132,11 @@ export async function POST(request: Request) {
         messagesFromDb = await getMessagesByChatId({ id });
       }
     } else if (message?.role === "user") {
-      // Check chat limit for new conversations
+      // Check chat limit for new conversations (premium users unlimited)
       const chatCount = await getChatCountByUserId({ userId: user.id });
 
-      if (chatCount >= FREE_USER_CHAT_LIMIT) {
-        return new ChatSDKError("rate_limit:chat", "You have reached the maximum number of chats (10) allowed on the free plan. Please contact support or burn existing chats to start a new one.").toResponse();
+      if (!hasPremium && chatCount >= FREE_USER_CHAT_LIMIT) {
+        return new ChatSDKError("rate_limit:chat", "You have reached the maximum number of chats (10) allowed on the free plan. Upgrade to Premium for unlimited chats.").toResponse();
       }
 
       // Save chat immediately with placeholder title
@@ -175,6 +183,10 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    // Global Memory: Get user settings for premium users (used in execute and onFinish)
+    const userSettings = hasPremium ? await getUserSettings(user.id) : null;
+    const globalMemoryEnabled = !userSettings || userSettings.globalMemoryEnabled;
+
     const stream = createUIMessageStream({
       // Pass original messages for tool approval continuation
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
@@ -199,10 +211,40 @@ export async function POST(request: Request) {
           ? "accounts/fireworks/models/minimax-m2p1"
           : selectedChatModel;
 
+        // Global Memory: Retrieve relevant memories for premium users (simple text search)
+        let memoryContext = "";
+
+        if (hasPremium && globalMemoryEnabled && message?.role === "user") {
+          try {
+            // Extract text from user message for keyword search
+            const userText = message.parts
+              ?.filter((p: any) => p.type === "text")
+              .map((p: any) => p.text)
+              .join(" ") || "";
+
+            if (userText.length > 10) {
+              // Simple hybrid search: keywords + recency (no vector embeddings - fast)
+              const memories = await searchMemories(user.id, userText, 3);
+
+              if (memories.length > 0) {
+                memoryContext = `\n\n[CONTEXT FROM PREVIOUS SESSIONS]
+The user has shared these insights in past conversations:
+${memories.map((m) => `- ${m.content}`).join("\n")}
+[END CONTEXT]
+
+Use this context naturally to provide more personalized coaching. Don't explicitly reference "previous sessions" unless relevant.\n`;
+              }
+            }
+          } catch (memError) {
+            console.error("Memory retrieval error (non-blocking):", memError);
+            // Non-blocking - continue without memory context
+          }
+        }
+
         const result = streamText({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           model: getLanguageModel(actualModelId) as any,
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({ selectedChatModel, requestHints }) + memoryContext,
           messages: await convertToModelMessages(uiMessages),
           temperature: 0.65,
           presencePenalty: 0.1,
@@ -287,6 +329,42 @@ export async function POST(request: Request) {
               chatId: id,
             })),
           });
+        }
+
+        // Global Memory: Save conversation summary for premium users (simple text, no embeddings)
+        if (hasPremium && globalMemoryEnabled && finishedMessages.length >= 2) {
+          try {
+            // Extract text from messages for summary
+            const conversationMessages = finishedMessages.map((m) => ({
+              role: m.role,
+              content: m.parts?.filter((p: any) => p.type === "text").map((p: any) => p.text).join(" ") || "",
+            })).filter((m) => m.content.length > 0);
+
+            if (conversationMessages.length >= 2) {
+              // Generate summary (using OpenAI for summarization only - no embeddings)
+              const summary = await generateConversationSummary(conversationMessages);
+
+              if (summary && summary.length > 10) {
+                // Calculate expiry based on user settings
+                let expiresAt: Date | undefined;
+                if (userSettings?.autoVanishEnabled && userSettings.autoVanishDays > 0) {
+                  expiresAt = new Date();
+                  expiresAt.setDate(expiresAt.getDate() + userSettings.autoVanishDays);
+                }
+
+                await saveMemory({
+                  userId: user.id,
+                  chatId: id,
+                  content: summary,
+                  contentType: "insight",
+                  expiresAt,
+                });
+              }
+            }
+          } catch (memSaveError) {
+            console.error("Memory save error (non-blocking):", memSaveError);
+            // Non-blocking - don't fail the response
+          }
         }
       },
       onError: () => {
