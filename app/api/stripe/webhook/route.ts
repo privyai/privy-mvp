@@ -2,7 +2,9 @@ import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import {
     getUserByStripeCustomerId,
+    isStripeEventProcessed,
     linkStripeCustomer,
+    logSubscriptionEvent,
     updateUserPlan,
 } from "@/lib/db/queries";
 import type Stripe from "stripe";
@@ -37,6 +39,12 @@ export async function POST(request: Request) {
     }
 
     try {
+        // Idempotency: Skip if already processed
+        if (await isStripeEventProcessed(event.id)) {
+            console.log(`Event ${event.id} already processed, skipping`);
+            return new Response("OK", { status: 200 });
+        }
+
         switch (event.type) {
             case "checkout.session.completed": {
                 const session = event.data.object as Stripe.Checkout.Session;
@@ -47,6 +55,13 @@ export async function POST(request: Request) {
                     await linkStripeCustomer(userId, session.customer as string);
                     // Upgrade to premium
                     await updateUserPlan(userId, "premium");
+                    // Log event for idempotency
+                    await logSubscriptionEvent({
+                        userId,
+                        eventType: event.type,
+                        newPlan: "premium",
+                        stripeEventId: event.id,
+                    });
                     console.log(`User ${userId} upgraded to premium`);
                 }
                 break;
