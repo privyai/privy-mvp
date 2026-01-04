@@ -72,7 +72,7 @@ export function ChatPreview() {
                 <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-4">
                     <div className="flex items-center gap-2">
                         <span className="text-muted-foreground text-xs">Mode:</span>
-                        <Badge className="text-xs" variant="outline">
+                        <Badge className="text-xs text-zinc-200 border-zinc-600" variant="outline">
                             Decision Lab
                         </Badge>
                     </div>

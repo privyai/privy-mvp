@@ -16,7 +16,6 @@ function SuccessContent() {
             setCountdown((prev) => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    router.push("/");
                     return 0;
                 }
                 return prev - 1;
@@ -24,7 +23,14 @@ function SuccessContent() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [router]);
+    }, []);
+
+    // Handle redirect when countdown reaches 0
+    useEffect(() => {
+        if (countdown === 0) {
+            router.push("/");
+        }
+    }, [countdown, router]);
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">

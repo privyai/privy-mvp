@@ -14,15 +14,12 @@ import {
 
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  // Legacy fields (for backward compatibility)
-  email: varchar("email", { length: 64 }),
-  password: varchar("password", { length: 64 }),
-  // Zero-trust token auth (new approach)
+  // Zero-trust token auth
   tokenHash: varchar("tokenHash", { length: 64 }).unique(),
   // Metadata
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   lastActiveAt: timestamp("lastActiveAt"),
-  // Subscription fields (Stripe integration)
+  // Subscription fields
   plan: varchar("plan", { length: 16 }).default("free"),
   stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
   trialEndsAt: timestamp("trialEndsAt"),
@@ -180,6 +177,15 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// IP Rate Limiting - tracks message generation attempts by IP
+export const ipRateLimit = pgTable("IPRateLimit", {
+  ipHash: varchar("ipHash", { length: 64 }).primaryKey().notNull(),
+  count: integer("count").notNull().default(0),
+  lastGeneratedAt: timestamp("lastGeneratedAt").notNull().defaultNow(),
+});
+
+export type IPRateLimit = InferSelectModel<typeof ipRateLimit>;
 
 // Global Memory - stores conversation insights for cross-session context
 // Simple text storage with recency-based retrieval (no vector embeddings)

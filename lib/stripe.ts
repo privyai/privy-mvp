@@ -22,8 +22,7 @@ export async function createCheckoutSession({
 }): Promise<{ url: string }> {
     const session = await stripe.checkout.sessions.create({
         mode: "subscription",
-        // Enable card and Link (supports crypto/wallet payments)
-        payment_method_types: ["card", "link"],
+        payment_method_types: ["card"],
         line_items: [
             {
                 price: PREMIUM_PRICE_ID,
@@ -34,12 +33,6 @@ export async function createCheckoutSession({
         cancel_url: `${returnUrl}/upgrade?canceled=true`,
         metadata: {
             userId,
-        },
-        // Enable crypto payments if available
-        payment_method_options: {
-            card: {
-                setup_future_usage: "off_session",
-            },
         },
     });
 
