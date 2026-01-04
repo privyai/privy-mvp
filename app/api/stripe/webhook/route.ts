@@ -18,14 +18,17 @@ export async function POST(request: Request) {
         return new Response("Missing stripe-signature header", { status: 400 });
     }
 
+    // Security: Require webhook secret to be configured
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+        console.error("STRIPE_WEBHOOK_SECRET is not configured");
+        return new Response("Webhook not configured", { status: 500 });
+    }
+
     let event: Stripe.Event;
 
     try {
-        event = stripe.webhooks.constructEvent(
-            body,
-            signature,
-            process.env.STRIPE_WEBHOOK_SECRET || ""
-        );
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
         console.error("Webhook signature verification failed:", err);
         return new Response("Webhook signature verification failed", {

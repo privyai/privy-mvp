@@ -144,7 +144,7 @@ export default function UpgradePage() {
                         </Button>
                     </form>
                     <p className="text-xs text-muted-foreground mt-2">
-                        Format: WEF2026PRIVY + last 5 chars of your token
+                        WEF 2026 attendees: Use code WEF2026PRIVY for a 7-day trial
                     </p>
                 </div>
 

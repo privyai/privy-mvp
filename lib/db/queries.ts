@@ -9,6 +9,7 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
   lt,
   type SQL,
 } from "drizzle-orm";
@@ -17,6 +18,8 @@ import postgres from "postgres";
 import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatSDKError } from "../errors";
+import { generateUUID } from "../utils";
+import { generateHashedPassword } from "./utils";
 import {
   type Chat,
   chat,
@@ -43,7 +46,6 @@ import {
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
-
 // ============================================
 // Zero-Trust Token Authentication Functions
 // ============================================
@@ -1043,12 +1045,18 @@ export async function deleteUserMemories(userId: string): Promise<void> {
 
 /**
  * Delete expired memories (for auto-vanish cleanup)
+ * Only deletes records where expiresAt is set AND has passed
  */
 export async function deleteExpiredMemories(): Promise<number> {
   try {
     const result = await db
       .delete(globalMemory)
-      .where(lt(globalMemory.expiresAt, new Date()))
+      .where(
+        and(
+          isNotNull(globalMemory.expiresAt),
+          lt(globalMemory.expiresAt, new Date())
+        )
+      )
       .returning({ id: globalMemory.id });
     return result.length;
   } catch (_error) {

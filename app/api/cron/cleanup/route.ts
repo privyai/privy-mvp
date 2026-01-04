@@ -9,8 +9,20 @@ import {
  * Configured in vercel.json - Vercel handles scheduling
  */
 export async function GET(request: Request) {
-  // Vercel cron jobs are protected - only Vercel can trigger them in production
-  // No manual CRON_SECRET needed
+  // Security: Verify the request is authorized
+  const authHeader = request.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+
+  // If CRON_SECRET is configured, require authorization
+  if (cronSecret) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+  } else {
+    // In production, CRON_SECRET should always be set
+    // Vercel cron jobs automatically include authorization header
+    console.warn("CRON_SECRET not configured - endpoint is unprotected");
+  }
 
   try {
     console.log("Starting auto-vanish cleanup...");
