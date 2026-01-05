@@ -5,6 +5,8 @@ import {
   searchMemories,
   saveMemory,
   deleteUserMemories,
+  getMemoryCount,
+  MAX_MEMORIES_PER_USER,
 } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
 
@@ -107,6 +109,15 @@ export async function POST(request: Request) {
       return new ChatSDKError(
         "bad_request:api",
         "Content must be at least 10 characters"
+      ).toResponse();
+    }
+
+    // Check memory limit with a transaction
+    const memoryCount = await getMemoryCount(user.id);
+    if (memoryCount >= MAX_MEMORIES_PER_USER) {
+      return new ChatSDKError(
+        "forbidden:api",
+        `Memory limit reached (${MAX_MEMORIES_PER_USER}). Delete old memories to add new ones.`
       ).toResponse();
     }
 

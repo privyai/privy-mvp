@@ -886,6 +886,24 @@ export async function updateUserSettings(
 // Global Memory Functions (Premium)
 // ============================================
 
+// Max memories per user to prevent unbounded growth
+export const MAX_MEMORIES_PER_USER = 100;
+
+/**
+ * Count memories for a user
+ */
+export async function getMemoryCount(userId: string): Promise<number> {
+  try {
+    const [result] = await db
+      .select({ count: count() })
+      .from(globalMemory)
+      .where(eq(globalMemory.userId, userId));
+    return result?.count ?? 0;
+  } catch (_error) {
+    return 0;
+  }
+}
+
 /**
  * Save a memory entry (simple text, no embeddings)
  */
