@@ -27,6 +27,7 @@ import {
   document,
   type GlobalMemory,
   globalMemory,
+  ipRateLimit,
   message,
   subscriptionEvent,
   type Suggestion,
@@ -54,9 +55,85 @@ const db = drizzle(client);
 // Zero-Trust Token Authentication Functions
 // ============================================
 
+// ============================================
+// IP Rate Limiting (5 accounts per IP per 24h)
+// ============================================
+
 /**
- * Get user by token hash
+ * Atomically check and increment IP rate limit
+ * Uses transaction with FOR UPDATE lock to prevent race conditions
  */
+export async function checkAndIncrementIPRateLimit(ipHash: string): Promise<{
+  allowed: boolean;
+  newCount: number;
+}> {
+  const LIMIT = 5;
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+  try {
+    // Use INSERT ON CONFLICT for atomic check-and-increment
+    const result = await db.transaction(async (tx) => {
+      const now = new Date();
+
+      // Try to get existing record with FOR UPDATE lock
+      const [existing] = await tx
+        .select()
+        .from(ipRateLimit)
+        .where(eq(ipRateLimit.ipHash, ipHash))
+        .for("update");
+
+      if (!existing) {
+        // First time seeing this IP - create with count=1
+        const [inserted] = await tx
+          .insert(ipRateLimit)
+          .values({
+            ipHash,
+            count: 1,
+            lastGeneratedAt: now,
+          })
+          .returning();
+        return { count: inserted.count, lastGeneratedAt: inserted.lastGeneratedAt };
+      }
+
+      // Check if the window has expired
+      const isExpired = Date.now() - existing.lastGeneratedAt.getTime() > TWENTY_FOUR_HOURS_MS;
+
+      if (isExpired) {
+        // Reset to 1 (new 24h window)
+        const [reset] = await tx
+          .update(ipRateLimit)
+          .set({ count: 1, lastGeneratedAt: now })
+          .where(eq(ipRateLimit.ipHash, ipHash))
+          .returning();
+        return { count: reset.count, lastGeneratedAt: reset.lastGeneratedAt };
+      }
+
+      // Increment existing count
+      const [updated] = await tx
+        .update(ipRateLimit)
+        .set({ count: existing.count + 1 })
+        .where(eq(ipRateLimit.ipHash, ipHash))
+        .returning();
+      return { count: updated.count, lastGeneratedAt: updated.lastGeneratedAt };
+    });
+
+    return {
+      allowed: result.count <= LIMIT,
+      newCount: result.count,
+    };
+  } catch (error) {
+    // HARD FAILURE - Don't allow account creation if we can't track it
+    console.error("Failed to check/increment IP rate limit:", error);
+    throw new ChatSDKError(
+      "bad_request:database",
+      "Unable to verify rate limit. Please try again."
+    );
+  }
+}
+
+// ============================================
+// Zero-Trust Token Authentication Functions
+// ============================================
 export async function getUserByTokenHash(
   tokenHash: string
 ): Promise<User | null> {
@@ -99,8 +176,9 @@ export async function createTokenUser(tokenHash: string): Promise<User> {
 
 /**
  * Get or create user by token hash (idempotent)
+ * Enforces IP rate limiting (5 accounts per IP per 24h) for new user creation
  */
-export async function getOrCreateTokenUser(tokenHash: string): Promise<User> {
+export async function getOrCreateTokenUser(tokenHash: string, ipHash: string): Promise<User> {
   // Try to find existing user
   const existingUser = await getUserByTokenHash(tokenHash);
 
@@ -112,6 +190,15 @@ export async function getOrCreateTokenUser(tokenHash: string): Promise<User> {
       .where(eq(user.id, existingUser.id));
 
     return existingUser;
+  }
+
+  // Check IP rate limit before creating new user
+  const { allowed, newCount } = await checkAndIncrementIPRateLimit(ipHash);
+  if (!allowed) {
+    throw new ChatSDKError(
+      "rate_limit:account_creation",
+      `Too many accounts created from this IP address. You have created ${newCount} accounts in the last 24 hours (limit: 5). Please try again later or contact support.`
+    );
   }
 
   // Create new user

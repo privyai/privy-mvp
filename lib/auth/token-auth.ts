@@ -1,7 +1,7 @@
 import "server-only";
 import type { User } from "@/lib/db/schema";
 import { getOrCreateTokenUser } from "@/lib/db/queries";
-import { hashToken, isValidTokenFormat } from "./token";
+import { hashToken, hashIp, isValidTokenFormat } from "./token";
 
 /**
  * Server-side token authentication
@@ -44,8 +44,27 @@ export async function authenticateToken(
     // Hash the token
     const tokenHash = hashToken(token);
 
-    // Get or create user (idempotent)
-    const user = await getOrCreateTokenUser(tokenHash);
+    // Extract IP for rate limiting new account creation
+    // NOTE: This relies on Vercel's proxy to set x-forwarded-for correctly.
+    // The first IP in the chain is the client IP. While this can technically
+    // be spoofed if the proxy is misconfigured, Vercel strips client-provided
+    // forwarding headers, making this reasonably secure for best-effort rate limiting.
+    const forwarded = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+
+    let ip = "127.0.0.1"; // Default fallback
+
+    if (forwarded) {
+      // Take the first IP in the chain and trim whitespace
+      ip = forwarded.split(",")[0].trim();
+    } else if (realIp) {
+      ip = realIp.trim();
+    }
+
+    const ipHash = hashIp(ip);
+
+    // Get or create user (idempotent, with IP rate limiting)
+    const user = await getOrCreateTokenUser(tokenHash, ipHash);
 
     return user;
   } catch (error) {

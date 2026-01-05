@@ -100,8 +100,8 @@ export async function POST(request: Request) {
     // Check if user has premium access (premium or active trial)
     const hasPremium = await isPremiumUser(user.id);
 
-    // Premium users have unlimited messages, free users capped at 50/day
-    const maxMessages = hasPremium ? Number.POSITIVE_INFINITY : 50;
+    // Premium users have unlimited messages, free users capped at 30/day
+    const maxMessages = hasPremium ? Number.POSITIVE_INFINITY : 30;
     const isAllowed = messageCount <= maxMessages;
 
     // Log rate limit check to Logfire (with hashed user ID for privacy)
