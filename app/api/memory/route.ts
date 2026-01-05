@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       ).toResponse();
     }
 
-    // Check memory limit
+    // Check memory limit with a transaction
     const memoryCount = await getMemoryCount(user.id);
     if (memoryCount >= MAX_MEMORIES_PER_USER) {
       return new ChatSDKError(
