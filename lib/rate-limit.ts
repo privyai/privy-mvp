@@ -65,8 +65,12 @@ export function isBotRequest(request: Request): boolean {
  */
 export async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
   if (!process.env.CLOUDFLARE_TURNSTILE_SECRET) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("CLOUDFLARE_TURNSTILE_SECRET missing in production!");
+      return false; // Fail closed in production
+    }
     console.warn("Turnstile secret not configured, skipping verification");
-    return true; // Allow in development
+    return true; // Allow in development only
   }
 
   try {

@@ -88,6 +88,11 @@ export async function POST(request: Request) {
 
     // Bot detection (using Cloudflare headers)
     if (isBotRequest(request)) {
+      logfire.info("security.bot_detected", {
+        ip: getClientIP(request),
+        userAgent: request.headers.get("user-agent") || "unknown",
+        botScore: request.headers.get("cf-bot-score") || "missing",
+      });
       return new Response("Forbidden: Bot detected", { status: 403 });
     }
 
