@@ -1,6 +1,6 @@
 import "server-only";
 import type { User } from "@/lib/db/schema";
-import { getOrCreateTokenUser } from "@/lib/db/queries";
+import { getOrCreateTokenUser, runUserCleanupIfNeeded } from "@/lib/db/queries";
 import { hashToken, hashIp, isValidTokenFormat } from "./token";
 
 /**
@@ -65,6 +65,14 @@ export async function authenticateToken(
 
     // Get or create user (idempotent, with IP rate limiting)
     const user = await getOrCreateTokenUser(tokenHash, ipHash);
+
+    // Trigger auto-vanish cleanup on login (non-blocking)
+    // This runs per-user cleanup if enabled and not run in last 24h
+    if (user) {
+      runUserCleanupIfNeeded(user.id).catch((error) => {
+        console.error("Auto-vanish cleanup error (non-blocking):", error);
+      });
+    }
 
     return user;
   } catch (error) {

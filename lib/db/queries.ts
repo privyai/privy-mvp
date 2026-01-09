@@ -21,6 +21,13 @@ import { ChatSDKError } from "../errors";
 import { generateUUID } from "../utils";
 import { generateHashedPassword } from "./utils";
 import {
+  generateEncryptionSalt,
+  deriveKeyFromToken,
+  encryptMessageParts,
+  safeDecryptParts,
+  type EncryptedPayload,
+} from "../crypto/message-encryption";
+import {
   type Chat,
   chat,
   type DBMessage,
@@ -567,6 +574,174 @@ export async function getMessagesByChatId({ id }: { id: string }) {
       "bad_request:database",
       "Failed to get messages by chat id"
     );
+  }
+}
+
+// ============================================
+// Message Encryption Functions
+// ============================================
+
+/**
+ * Get or create encryption salt for a user
+ * Salt is generated once and stored with the user
+ */
+export async function getOrCreateEncryptionSalt(userId: string): Promise<string> {
+  try {
+    // Get current user
+    const [currentUser] = await db
+      .select({ encryptionSalt: user.encryptionSalt })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    if (!currentUser) {
+      throw new ChatSDKError("not_found:user", "User not found");
+    }
+
+    // If salt exists, return it
+    if (currentUser.encryptionSalt) {
+      return currentUser.encryptionSalt;
+    }
+
+    // Generate new salt and store it
+    const newSalt = generateEncryptionSalt();
+    await db
+      .update(user)
+      .set({ encryptionSalt: newSalt })
+      .where(eq(user.id, userId));
+
+    return newSalt;
+  } catch (error) {
+    if (error instanceof ChatSDKError) throw error;
+    throw new ChatSDKError("bad_request:database", "Failed to get encryption salt");
+  }
+}
+
+/**
+ * Get user's encryption salt (returns null if not set)
+ */
+export async function getEncryptionSalt(userId: string): Promise<string | null> {
+  try {
+    const [currentUser] = await db
+      .select({ encryptionSalt: user.encryptionSalt })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    return currentUser?.encryptionSalt || null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+/**
+ * Save messages with encryption
+ * Encrypts message parts before storing
+ *
+ * @param messages - Messages to save
+ * @param rawToken - User's raw token (for key derivation)
+ * @param userId - User ID (for salt lookup)
+ */
+export async function saveMessagesEncrypted({
+  messages: messagesToSave,
+  rawToken,
+  userId,
+}: {
+  messages: DBMessage[];
+  rawToken: string;
+  userId: string;
+}) {
+  try {
+    // Get or create encryption salt
+    const salt = await getOrCreateEncryptionSalt(userId);
+
+    // Derive encryption key from token
+    const encryptionKey = deriveKeyFromToken(rawToken, salt);
+
+    // Encrypt each message's parts
+    const encryptedMessages = messagesToSave.map((msg) => ({
+      ...msg,
+      parts: encryptMessageParts(msg.parts as unknown[], encryptionKey) as unknown as DBMessage["parts"],
+    }));
+
+    return await db.insert(message).values(encryptedMessages);
+  } catch (error) {
+    if (error instanceof ChatSDKError) throw error;
+    throw new ChatSDKError("bad_request:database", "Failed to save encrypted messages");
+  }
+}
+
+/**
+ * Get messages by chat ID with decryption
+ * Automatically handles both encrypted and plaintext messages
+ *
+ * @param id - Chat ID
+ * @param rawToken - User's raw token (for key derivation)
+ * @param userId - User ID (for salt lookup)
+ */
+export async function getMessagesDecrypted({
+  id,
+  rawToken,
+  userId,
+}: {
+  id: string;
+  rawToken: string;
+  userId: string;
+}): Promise<DBMessage[]> {
+  try {
+    // Get messages
+    const messages = await db
+      .select()
+      .from(message)
+      .where(eq(message.chatId, id))
+      .orderBy(asc(message.createdAt));
+
+    // Get encryption salt (may be null for users without encryption)
+    const salt = await getEncryptionSalt(userId);
+
+    // If no salt, user hasn't used encryption - return as-is
+    if (!salt) {
+      return messages;
+    }
+
+    // Derive decryption key
+    const encryptionKey = deriveKeyFromToken(rawToken, salt);
+
+    // Decrypt each message's parts (handles both encrypted and plaintext)
+    return messages.map((msg) => ({
+      ...msg,
+      parts: safeDecryptParts(msg.parts, encryptionKey) as DBMessage["parts"],
+    }));
+  } catch (error) {
+    if (error instanceof ChatSDKError) throw error;
+    throw new ChatSDKError("bad_request:database", "Failed to get decrypted messages");
+  }
+}
+
+/**
+ * Update message with encryption
+ */
+export async function updateMessageEncrypted({
+  id,
+  parts,
+  rawToken,
+  userId,
+}: {
+  id: string;
+  parts: DBMessage["parts"];
+  rawToken: string;
+  userId: string;
+}) {
+  try {
+    const salt = await getOrCreateEncryptionSalt(userId);
+    const encryptionKey = deriveKeyFromToken(rawToken, salt);
+    const encryptedParts = encryptMessageParts(parts as unknown[], encryptionKey);
+
+    return await db
+      .update(message)
+      .set({ parts: encryptedParts as unknown as DBMessage["parts"] })
+      .where(eq(message.id, id));
+  } catch (error) {
+    if (error instanceof ChatSDKError) throw error;
+    throw new ChatSDKError("bad_request:database", "Failed to update encrypted message");
   }
 }
 
@@ -1158,20 +1333,36 @@ export async function deleteUserMemories(userId: string): Promise<void> {
  */
 export async function deleteExpiredMemories(): Promise<number> {
   try {
+    const now = new Date();
+    console.log(`[deleteExpiredMemories] Checking for expired memories before ${now.toISOString()}`);
+
     const result = await db
       .delete(globalMemory)
       .where(
         and(
           isNotNull(globalMemory.expiresAt),
-          lt(globalMemory.expiresAt, new Date())
+          lt(globalMemory.expiresAt, now)
         )
       )
       .returning({ id: globalMemory.id });
+
+    console.log(`[deleteExpiredMemories] Successfully deleted ${result.length} expired memories`);
     return result.length;
-  } catch (_error) {
+  } catch (error) {
+    console.error('[deleteExpiredMemories] Database error:', error);
+
+    // Check if table exists error
+    if (error instanceof Error && error.message.includes('does not exist')) {
+      console.error('[deleteExpiredMemories] GlobalMemory table does not exist. Migration 0009 may not have run.');
+      throw new ChatSDKError(
+        "bad_request:database",
+        "GlobalMemory table not found - database migration required"
+      );
+    }
+
     throw new ChatSDKError(
       "bad_request:database",
-      "Failed to delete expired memories"
+      `Failed to delete expired memories: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 }
@@ -1254,6 +1445,8 @@ export async function isStripeEventProcessed(
  */
 export async function deleteExpiredChatsForAutoVanish(): Promise<number> {
   try {
+    console.log('[deleteExpiredChatsForAutoVanish] Starting auto-vanish chat cleanup');
+
     // Get users with auto-vanish enabled
     const usersWithAutoVanish = await db
       .select({
@@ -1263,11 +1456,19 @@ export async function deleteExpiredChatsForAutoVanish(): Promise<number> {
       .from(userSettings)
       .where(eq(userSettings.autoVanishEnabled, true));
 
+    console.log(`[deleteExpiredChatsForAutoVanish] Found ${usersWithAutoVanish.length} users with auto-vanish enabled`);
+
     let totalDeleted = 0;
 
     for (const userConfig of usersWithAutoVanish) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - userConfig.autoVanishDays);
+      // Validate autoVanishDays to prevent negative values
+      const days = Math.max(1, userConfig.autoVanishDays || 30);
+
+      // Calculate cutoff date more safely
+      const now = new Date();
+      const cutoffDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+
+      console.log(`[deleteExpiredChatsForAutoVanish] User ${userConfig.userId}: deleting chats older than ${cutoffDate.toISOString()} (${days} days)`);
 
       // Get chats to delete
       const chatsToDelete = await db
@@ -1280,17 +1481,138 @@ export async function deleteExpiredChatsForAutoVanish(): Promise<number> {
           )
         );
 
+      console.log(`[deleteExpiredChatsForAutoVanish] Found ${chatsToDelete.length} chats to delete for user ${userConfig.userId}`);
+
       for (const chatToDelete of chatsToDelete) {
-        await deleteChatById({ id: chatToDelete.id });
-        totalDeleted++;
+        try {
+          await deleteChatById({ id: chatToDelete.id });
+          totalDeleted++;
+        } catch (deleteError) {
+          console.error(`[deleteExpiredChatsForAutoVanish] Failed to delete chat ${chatToDelete.id}:`, deleteError);
+          // Continue with other chats even if one fails
+        }
       }
     }
 
+    console.log(`[deleteExpiredChatsForAutoVanish] Successfully deleted ${totalDeleted} expired chats`);
     return totalDeleted;
-  } catch (_error) {
+  } catch (error) {
+    console.error('[deleteExpiredChatsForAutoVanish] Error during cleanup:', error);
     throw new ChatSDKError(
       "bad_request:database",
-      "Failed to delete expired chats"
+      `Failed to delete expired chats: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
+  }
+}
+
+// ============================================
+// On-Login Auto-Vanish (Per-User Cleanup)
+// ============================================
+
+/**
+ * Run cleanup for a specific user if not run recently
+ * Called on authentication - avoids running cleanup every request
+ * Non-blocking - errors don't affect login flow
+ */
+export async function runUserCleanupIfNeeded(userId: string): Promise<void> {
+  try {
+    // Get user settings
+    const settings = await getUserSettings(userId);
+
+    // If no settings or auto-vanish disabled, skip
+    if (!settings?.autoVanishEnabled) {
+      return;
+    }
+
+    // Check if cleanup ran in last 24 hours
+    const lastCleanup = settings.lastCleanupAt;
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    if (lastCleanup && lastCleanup > oneDayAgo) {
+      return; // Already ran recently
+    }
+
+    // Run per-user cleanup
+    await deleteExpiredMemoriesForUser(userId);
+    await deleteExpiredChatsForUser(userId, settings.autoVanishDays);
+
+    // Update last cleanup timestamp
+    await db
+      .update(userSettings)
+      .set({ lastCleanupAt: new Date(), updatedAt: new Date() })
+      .where(eq(userSettings.userId, userId));
+
+  } catch (error) {
+    // Non-blocking - log but don't fail login
+    console.error(`[runUserCleanupIfNeeded] Cleanup failed for user ${userId}:`, error);
+  }
+}
+
+/**
+ * Delete expired memories for a specific user
+ */
+export async function deleteExpiredMemoriesForUser(userId: string): Promise<number> {
+  try {
+    const now = new Date();
+    const result = await db
+      .delete(globalMemory)
+      .where(
+        and(
+          eq(globalMemory.userId, userId),
+          isNotNull(globalMemory.expiresAt),
+          lt(globalMemory.expiresAt, now)
+        )
+      )
+      .returning({ id: globalMemory.id });
+
+    if (result.length > 0) {
+      console.log(`[deleteExpiredMemoriesForUser] Deleted ${result.length} expired memories for user ${userId}`);
+    }
+    return result.length;
+  } catch (error) {
+    console.error(`[deleteExpiredMemoriesForUser] Error for user ${userId}:`, error);
+    return 0;
+  }
+}
+
+/**
+ * Delete expired chats for a specific user based on their auto-vanish settings
+ */
+export async function deleteExpiredChatsForUser(
+  userId: string,
+  autoVanishDays: number
+): Promise<number> {
+  try {
+    const days = Math.max(1, autoVanishDays || 30);
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Get chats to delete
+    const chatsToDelete = await db
+      .select({ id: chat.id })
+      .from(chat)
+      .where(
+        and(
+          eq(chat.userId, userId),
+          lt(chat.createdAt, cutoffDate)
+        )
+      );
+
+    let deletedCount = 0;
+    for (const chatToDelete of chatsToDelete) {
+      try {
+        await deleteChatById({ id: chatToDelete.id });
+        deletedCount++;
+      } catch (deleteError) {
+        console.error(`[deleteExpiredChatsForUser] Failed to delete chat ${chatToDelete.id}:`, deleteError);
+      }
+    }
+
+    if (deletedCount > 0) {
+      console.log(`[deleteExpiredChatsForUser] Deleted ${deletedCount} expired chats for user ${userId}`);
+    }
+    return deletedCount;
+  } catch (error) {
+    console.error(`[deleteExpiredChatsForUser] Error for user ${userId}:`, error);
+    return 0;
   }
 }

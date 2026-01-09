@@ -12,7 +12,7 @@ import {
   createResumableStreamContext,
   type ResumableStreamContext,
 } from "resumable-stream";
-import { authenticateToken } from "@/lib/auth/token-auth";
+import { authenticateToken, getTokenFromRequest } from "@/lib/auth/token-auth";
 import { hashToken } from "@/lib/auth/token";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -28,17 +28,23 @@ import {
   getChatById,
   getChatCountByUserId,
   getMessageCountByUserId,
-  getMessagesByChatId,
+  getMessagesDecrypted,
   getUserSettings,
   isPremiumUser,
   saveChat,
   saveMemory,
-  saveMessages,
+  saveMessagesEncrypted,
   searchMemories,
   updateChatTitleById,
-  updateMessage,
+  updateMessageEncrypted,
 } from "@/lib/db/queries";
 import { generateConversationSummary } from "@/lib/ai/embeddings";
+import {
+  buildCompactedContext,
+  formatContextForPrompt,
+  saveConversationInsights,
+  type ContextMessage,
+} from "@/lib/ai/context-compactor";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
@@ -92,6 +98,12 @@ export async function POST(request: Request) {
       return new ChatSDKError("unauthorized:chat").toResponse();
     }
 
+    // Get raw token for encryption (needed for message encryption/decryption)
+    const rawToken = getTokenFromRequest(request);
+    if (!rawToken) {
+      return new ChatSDKError("unauthorized:chat").toResponse();
+    }
+
     const messageCount = await getMessageCountByUserId({
       id: user.id,
       differenceInHours: 24,
@@ -129,7 +141,7 @@ export async function POST(request: Request) {
       }
       // Only fetch messages if chat already exists and not tool approval
       if (!isToolApprovalFlow) {
-        messagesFromDb = await getMessagesByChatId({ id });
+        messagesFromDb = await getMessagesDecrypted({ id, rawToken, userId: user.id });
       }
     } else if (message?.role === "user") {
       // Check chat limit for new conversations (premium users unlimited)
@@ -166,7 +178,7 @@ export async function POST(request: Request) {
 
     // Only save user messages to the database (not tool approval responses)
     if (message?.role === "user") {
-      await saveMessages({
+      await saveMessagesEncrypted({
         messages: [
           {
             chatId: id,
@@ -177,6 +189,8 @@ export async function POST(request: Request) {
             createdAt: new Date(),
           },
         ],
+        rawToken,
+        userId: user.id,
       });
     }
 
@@ -211,32 +225,23 @@ export async function POST(request: Request) {
           ? "accounts/fireworks/models/minimax-m2p1"
           : selectedChatModel;
 
-        // Global Memory: Retrieve relevant memories for premium users (simple text search)
+        // Global Memory: Build compacted context for premium users
+        // Uses conversation compacting (like Claude Code) - no embeddings/RAG
         let memoryContext = "";
 
-        if (hasPremium && globalMemoryEnabled && message?.role === "user") {
+        if (hasPremium && globalMemoryEnabled) {
           try {
-            // Extract text from user message for keyword search
-            const userText = message.parts
-              ?.filter((p: any) => p.type === "text")
-              .map((p: any) => p.text)
-              .join(" ") || "";
+            // Build compacted context from current chat + stored memories
+            const compactedContext = await buildCompactedContext(
+              user.id,
+              messagesFromDb,
+              { maxRecentMessages: 50, includeHistory: true }
+            );
 
-            if (userText.length > 10) {
-              // Simple hybrid search: keywords + recency (no vector embeddings - fast)
-              const memories = await searchMemories(user.id, userText, 3);
-
-              if (memories.length > 0) {
-                memoryContext = `\n\n[CONTEXT FROM PREVIOUS SESSIONS]
-The user has shared these insights in past conversations:
-${memories.map((m) => `- ${m.content}`).join("\n")}
-[END CONTEXT]
-
-Use this context naturally to provide more personalized coaching. Don't explicitly reference "previous sessions" unless relevant.\n`;
-              }
-            }
+            // Format for injection into system prompt
+            memoryContext = formatContextForPrompt(compactedContext);
           } catch (memError) {
-            console.error("Memory retrieval error (non-blocking):", memError);
+            console.error("Context building error (non-blocking):", memError);
             // Non-blocking - continue without memory context
           }
         }
@@ -297,13 +302,15 @@ Use this context naturally to provide more personalized coaching. Don't explicit
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
             if (existingMsg) {
               // Update existing message with new parts (tool state changed)
-              await updateMessage({
+              await updateMessageEncrypted({
                 id: finishedMsg.id,
                 parts: finishedMsg.parts,
+                rawToken,
+                userId: user.id,
               });
             } else {
               // Save new message
-              await saveMessages({
+              await saveMessagesEncrypted({
                 messages: [
                   {
                     id: finishedMsg.id,
@@ -314,12 +321,14 @@ Use this context naturally to provide more personalized coaching. Don't explicit
                     chatId: id,
                   },
                 ],
+                rawToken,
+                userId: user.id,
               });
             }
           }
         } else if (finishedMessages.length > 0) {
-          // Normal flow - save all finished messages
-          await saveMessages({
+          // Normal flow - save all finished messages (encrypted)
+          await saveMessagesEncrypted({
             messages: finishedMessages.map((currentMessage) => ({
               id: currentMessage.id,
               role: currentMessage.role,
@@ -328,38 +337,38 @@ Use this context naturally to provide more personalized coaching. Don't explicit
               attachments: [],
               chatId: id,
             })),
+            rawToken,
+            userId: user.id,
           });
         }
 
-        // Global Memory: Save conversation summary for premium users (simple text, no embeddings)
+        // Global Memory: Save compacted insights for premium users
+        // Uses conversation compacting to extract key insights + profile facts
         if (hasPremium && globalMemoryEnabled && finishedMessages.length >= 2) {
           try {
-            // Extract text from messages for summary
-            const conversationMessages = finishedMessages.map((m) => ({
-              role: m.role,
-              content: m.parts?.filter((p: any) => p.type === "text").map((p: any) => p.text).join(" ") || "",
-            })).filter((m) => m.content.length > 0);
+            // Extract text from messages for compaction
+            const conversationMessages: ContextMessage[] = finishedMessages
+              .map((m) => ({
+                role: m.role,
+                content: m.parts?.filter((p: any) => p.type === "text").map((p: any) => p.text).join(" ") || "",
+              }))
+              .filter((m) => m.content.length > 0);
 
             if (conversationMessages.length >= 2) {
-              // Generate summary (using OpenAI for summarization only - no embeddings)
-              const summary = await generateConversationSummary(conversationMessages);
-
-              if (summary && summary.length > 10) {
-                // Calculate expiry based on user settings
-                let expiresAt: Date | undefined;
-                if (userSettings?.autoVanishEnabled && userSettings.autoVanishDays > 0) {
-                  expiresAt = new Date();
-                  expiresAt.setDate(expiresAt.getDate() + userSettings.autoVanishDays);
-                }
-
-                await saveMemory({
-                  userId: user.id,
-                  chatId: id,
-                  content: summary,
-                  contentType: "insight",
-                  expiresAt,
-                });
+              // Calculate expiry based on user settings
+              let expiresAt: Date | undefined;
+              if (userSettings?.autoVanishEnabled && userSettings.autoVanishDays > 0) {
+                expiresAt = new Date();
+                expiresAt.setDate(expiresAt.getDate() + userSettings.autoVanishDays);
               }
+
+              // Save compacted insights (summary + profile facts)
+              await saveConversationInsights(
+                user.id,
+                id,
+                conversationMessages,
+                expiresAt
+              );
             }
           } catch (memSaveError) {
             console.error("Memory save error (non-blocking):", memSaveError);

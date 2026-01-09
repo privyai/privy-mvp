@@ -161,6 +161,9 @@ importers:
       lucide-react:
         specifier: ^0.446.0
         version: 0.446.0(react@19.0.1)
+      mixpanel-browser:
+        specifier: ^2.73.0
+        version: 2.73.0(@mixpanel/rrweb-utils@2.0.0-alpha.18.2)
       motion:
         specifier: ^12.23.26
         version: 12.23.26(react-dom@19.0.1(react@19.0.1))(react@19.0.1)
@@ -1186,6 +1189,27 @@ packages:
 
   '@mermaid-js/parser@0.6.3':
     resolution: {integrity: sha512-lnjOhe7zyHjc+If7yT4zoedx2vo4sHaTmtkl1+or8BRTnCtDmcTpAjpzDSfCZrshM5bCoz0GyidzadJAH1xobA==}
+
+  '@mixpanel/rrdom@2.0.0-alpha.18.2':
+    resolution: {integrity: sha512-vX/tbnS14ZzzatC7vOyvAm9tOLU8tof0BuppBlphzEx1YHTSw8DQiAmyAc0AmXidchLV0W+cUHV/WsehPLh2hQ==}
+
+  '@mixpanel/rrweb-plugin-console-record@2.0.0-alpha.18.2':
+    resolution: {integrity: sha512-Xkwh2gSdLqHRkWSXv8CPVCPQj5L85KnWc5DZQ0CXNRFgm2hTl5/YP6zfUubVs2JVXZHGcSGU+g7JVO2WcFJyyg==}
+    peerDependencies:
+      '@mixpanel/rrweb': ^2.0.0-alpha.18
+      '@mixpanel/rrweb-utils': ^2.0.0-alpha.18
+
+  '@mixpanel/rrweb-snapshot@2.0.0-alpha.18.2':
+    resolution: {integrity: sha512-2kSnjZZ3QZ9zOz/isOt8s54mXUUDgXk/u0eEi/rE0xBWDeuA0NHrBcqiMc+w4F/yWWUpo5F5zcuPeYpc6ufAsw==}
+
+  '@mixpanel/rrweb-types@2.0.0-alpha.18.2':
+    resolution: {integrity: sha512-ucIYe1mfJ2UksvXW+d3bOySTB2/0yUSqQJlUydvbBz6OO2Bhq3nJHyLXV9ExkgUMZm1ZyDcvvmNUd1+5tAXlpA==}
+
+  '@mixpanel/rrweb-utils@2.0.0-alpha.18.2':
+    resolution: {integrity: sha512-OomKIB6GTx5xvCLJ7iic2khT/t/tnCJUex13aEqsbSqIT/UzUUsqf+LTrgUK5ex+f6odmkCNjre2y5jvpNqn+g==}
+
+  '@mixpanel/rrweb@2.0.0-alpha.18.2':
+    resolution: {integrity: sha512-J3dVTEu6Z4p8di7y9KKvUooNuBjX97DdG6XGWoPEPi07A9512h9M8MEtvlY3mK0PGfuC0Mz5Pv/Ws6gjGYfKQg==}
 
   '@next/env@16.0.10':
     resolution: {integrity: sha512-8tuaQkyDVgeONQ1MeT9Mkk8pQmZapMKFh5B+OrFUlG3rVmYTXcXlBetBgTurKXGaIZvkoqRT9JL5K3phXcgang==}
@@ -2432,6 +2456,9 @@ packages:
   '@types/cookie@0.6.0':
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
 
+  '@types/css-font-loading-module@0.0.7':
+    resolution: {integrity: sha512-nl09VhutdjINdWyXxHWN/w9zlNCfr60JUqJbd24YXUuCwgeL0TpFSdElCwb6cxfB6ybE19Gjj4g0jsgkXxKv1Q==}
+
   '@types/d3-array@3.2.2':
     resolution: {integrity: sha512-hOLWVbm7uRza0BYXpIIW5pxfrKe0W+D5lrFiAEYR+pb6w3N2SwSMaJbXdUfSEv+dT4MfHBLtn5js0LAWaO6otw==}
 
@@ -2728,6 +2755,9 @@ packages:
   '@vitest/utils@4.0.16':
     resolution: {integrity: sha512-h8z9yYhV3e1LEfaQ3zdypIrnAg/9hguReGZoS7Gl0aBG5xgA410zBqECqmaF/+RkTggRsfnzc1XaAHA6bmUufA==}
 
+  '@xstate/fsm@1.6.5':
+    resolution: {integrity: sha512-b5o1I6aLNeYlU/3CPlj/Z91ybk1gUsKT+5NAJI+2W4UjvS5KLG28K9v5UvNoFVjHV8PajVZ00RH3vnjyQO7ZAw==}
+
   '@xyflow/react@12.10.0':
     resolution: {integrity: sha512-eOtz3whDMWrB4KWVatIBrKuxECHqip6PfA8fTpaS2RUGVpiEAe+nqDKsLqkViVWxDGreq0lWX71Xth/SPAzXiw==}
     peerDependencies:
@@ -2772,6 +2802,10 @@ packages:
 
   bail@2.0.2:
     resolution: {integrity: sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw==}
+
+  base64-arraybuffer@1.0.2:
+    resolution: {integrity: sha512-I3yl4r9QB5ZRY3XuJVEPfc2XhZO6YweFPI+UovAzn+8/hb3oJ6lnysaFcjVpkCPfVWFUDvoZ8kmVDP7WyRtYtQ==}
+    engines: {node: '>= 0.6.0'}
 
   bcrypt-ts@5.0.3:
     resolution: {integrity: sha512-2FcgD12xPbwCoe5i9/HK0jJ1xA1m+QfC1e6htG9Bl/hNOnLyaFmQSlqLKcfe3QdnoMPKpKEGFCbESBTg+SJNOw==}
@@ -3895,6 +3929,12 @@ packages:
 
   micromark@4.0.2:
     resolution: {integrity: sha512-zpe98Q6kvavpCr1NPVSCMebCKfD7CA2NqZ+rykeNhONIJBpc1tFKt9hucLGwha3jNTNI8lHpctWJWoimVF4PfA==}
+
+  mitt@3.0.1:
+    resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
+
+  mixpanel-browser@2.73.0:
+    resolution: {integrity: sha512-Ny+6BVeWJozZoyrzB+5/6LTqBZ0gDY1pwcs7PQLQVGPKMTdL8qAz0yV4H8ykGQEA5KrW2Ky/KZ3uMEHGjE7oSA==}
 
   mlly@1.8.0:
     resolution: {integrity: sha512-l8D9ODSRWLe2KHJSifWGwBqpTZXIXTeo8mlKjY+E2HAakaTeNpqAyBZ8GSqLzHgw4XmHmC8whvpjJNMbFZN7/g==}
@@ -5474,6 +5514,34 @@ snapshots:
     dependencies:
       langium: 3.3.1
 
+  '@mixpanel/rrdom@2.0.0-alpha.18.2':
+    dependencies:
+      '@mixpanel/rrweb-snapshot': 2.0.0-alpha.18.2
+
+  '@mixpanel/rrweb-plugin-console-record@2.0.0-alpha.18.2(@mixpanel/rrweb-utils@2.0.0-alpha.18.2)(@mixpanel/rrweb@2.0.0-alpha.18.2)':
+    dependencies:
+      '@mixpanel/rrweb': 2.0.0-alpha.18.2
+      '@mixpanel/rrweb-utils': 2.0.0-alpha.18.2
+
+  '@mixpanel/rrweb-snapshot@2.0.0-alpha.18.2':
+    dependencies:
+      postcss: 8.5.6
+
+  '@mixpanel/rrweb-types@2.0.0-alpha.18.2': {}
+
+  '@mixpanel/rrweb-utils@2.0.0-alpha.18.2': {}
+
+  '@mixpanel/rrweb@2.0.0-alpha.18.2':
+    dependencies:
+      '@mixpanel/rrdom': 2.0.0-alpha.18.2
+      '@mixpanel/rrweb-snapshot': 2.0.0-alpha.18.2
+      '@mixpanel/rrweb-types': 2.0.0-alpha.18.2
+      '@mixpanel/rrweb-utils': 2.0.0-alpha.18.2
+      '@types/css-font-loading-module': 0.0.7
+      '@xstate/fsm': 1.6.5
+      base64-arraybuffer: 1.0.2
+      mitt: 3.0.1
+
   '@next/env@16.0.10': {}
 
   '@next/swc-darwin-arm64@16.0.10':
@@ -6686,6 +6754,8 @@ snapshots:
 
   '@types/cookie@0.6.0': {}
 
+  '@types/css-font-loading-module@0.0.7': {}
+
   '@types/d3-array@3.2.2': {}
 
   '@types/d3-axis@3.0.6':
@@ -7010,6 +7080,8 @@ snapshots:
       '@vitest/pretty-format': 4.0.16
       tinyrainbow: 3.0.3
 
+  '@xstate/fsm@1.6.5': {}
+
   '@xyflow/react@12.10.0(@types/react@18.3.27)(react-dom@19.0.1(react@19.0.1))(react@19.0.1)':
     dependencies:
       '@xyflow/system': 0.0.74
@@ -7066,6 +7138,8 @@ snapshots:
       retry: 0.13.1
 
   bail@2.0.2: {}
+
+  base64-arraybuffer@1.0.2: {}
 
   bcrypt-ts@5.0.3: {}
 
@@ -8435,6 +8509,15 @@ snapshots:
       micromark-util-types: 2.0.2
     transitivePeerDependencies:
       - supports-color
+
+  mitt@3.0.1: {}
+
+  mixpanel-browser@2.73.0(@mixpanel/rrweb-utils@2.0.0-alpha.18.2):
+    dependencies:
+      '@mixpanel/rrweb': 2.0.0-alpha.18.2
+      '@mixpanel/rrweb-plugin-console-record': 2.0.0-alpha.18.2(@mixpanel/rrweb-utils@2.0.0-alpha.18.2)(@mixpanel/rrweb@2.0.0-alpha.18.2)
+    transitivePeerDependencies:
+      - '@mixpanel/rrweb-utils'
 
   mlly@1.8.0:
     dependencies:

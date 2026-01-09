@@ -12,15 +12,24 @@ export async function GET(request: Request) {
   // Security: Verify the request is authorized
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // In production, CRON_SECRET is required
+  if (isProduction && !cronSecret) {
+    console.error("CRON_SECRET not configured in production - rejecting request");
+    return new Response("Service Unavailable - Configuration Error", {
+      status: 503
+    });
+  }
 
   // If CRON_SECRET is configured, require authorization
   if (cronSecret) {
     if (authHeader !== `Bearer ${cronSecret}`) {
+      console.warn("Unauthorized cron request attempt");
       return new Response("Unauthorized", { status: 401 });
     }
   } else {
-    // In production, CRON_SECRET should always be set
-    // Vercel cron jobs automatically include authorization header
+    // Development only - log warning
     console.warn("CRON_SECRET not configured - endpoint is unprotected");
   }
 

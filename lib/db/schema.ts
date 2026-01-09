@@ -16,6 +16,8 @@ export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   // Zero-trust token auth
   tokenHash: varchar("tokenHash", { length: 64 }).unique(),
+  // Message encryption salt (unique per user, generated on first message)
+  encryptionSalt: varchar("encryptionSalt", { length: 32 }),
   // Metadata
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   lastActiveAt: timestamp("lastActiveAt"),
@@ -219,6 +221,8 @@ export const userSettings = pgTable("UserSettings", {
   autoVanishDays: integer("autoVanishDays").notNull().default(30),
   // Hard-burn mode - immediate permanent deletion
   hardBurnEnabled: boolean("hardBurnEnabled").notNull().default(false),
+  // Last cleanup timestamp (for on-login auto-vanish)
+  lastCleanupAt: timestamp("lastCleanupAt"),
   // Timestamps
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
