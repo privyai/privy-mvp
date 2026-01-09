@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { mixpanelService, trackPageView } from '@/lib/analytics/mixpanel';
 
-export function MixpanelProvider({ children }: { children: React.ReactNode }) {
+function MixpanelTracker() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
@@ -24,5 +24,16 @@ export function MixpanelProvider({ children }: { children: React.ReactNode }) {
         }
     }, [pathname, searchParams]);
 
-    return <>{children}</>;
+    return null;
+}
+
+export function MixpanelProvider({ children }: { children: React.ReactNode }) {
+    return (
+        <>
+            <Suspense fallback={null}>
+                <MixpanelTracker />
+            </Suspense>
+            {children}
+        </>
+    );
 }
