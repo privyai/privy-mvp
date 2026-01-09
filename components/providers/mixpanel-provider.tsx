@@ -1,38 +1,48 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { mixpanelService, trackPageView } from '@/lib/analytics/mixpanel';
 
 function MixpanelTracker() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const [isInitialized, setIsInitialized] = useState(false);
 
-    // Initialize Mixpanel
+    // Initialize Mixpanel only on client
     useEffect(() => {
         mixpanelService.init();
+        setIsInitialized(true);
     }, []);
 
-    // Track page views on route change
+    // Track page views on route change (only after init)
     useEffect(() => {
-        if (pathname) {
-            const url = searchParams.toString()
+        if (isInitialized && pathname) {
+            const url = searchParams?.toString()
                 ? `${pathname}?${searchParams.toString()}`
                 : pathname;
 
             trackPageView(url);
         }
-    }, [pathname, searchParams]);
+    }, [pathname, searchParams, isInitialized]);
 
     return null;
 }
 
 export function MixpanelProvider({ children }: { children: React.ReactNode }) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <>
-            <Suspense fallback={null}>
-                <MixpanelTracker />
-            </Suspense>
+            {mounted && (
+                <Suspense fallback={null}>
+                    <MixpanelTracker />
+                </Suspense>
+            )}
             {children}
         </>
     );
