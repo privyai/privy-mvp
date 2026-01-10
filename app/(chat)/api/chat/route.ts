@@ -17,7 +17,6 @@ import { hashToken } from "@/lib/auth/token";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
-import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
@@ -25,6 +24,7 @@ import {
   createStreamId,
   deleteChatById,
   FREE_USER_CHAT_LIMIT,
+  getAllChatSummaries,
   getChatById,
   getChatCountByUserId,
   getMessageCountByUserId,
@@ -32,17 +32,20 @@ import {
   getUserSettings,
   isPremiumUser,
   saveChat,
+  saveChatSummary,
   saveMemory,
   saveMessagesEncrypted,
   searchMemories,
   updateChatTitleById,
   updateMessageEncrypted,
 } from "@/lib/db/queries";
-import { generateConversationSummary } from "@/lib/ai/embeddings";
+
 import {
   buildCompactedContext,
   formatContextForPrompt,
+  formatChatSummariesForPrompt,
   saveConversationInsights,
+  summarizeChatWithTitle,
   type ContextMessage,
 } from "@/lib/ai/context-compactor";
 import type { DBMessage } from "@/lib/db/schema";
@@ -231,15 +234,20 @@ export async function POST(request: Request) {
 
         if (hasPremium && globalMemoryEnabled) {
           try {
-            // Build compacted context from current chat + stored memories
+            // 1. Get cross-chat summaries (all other chats with titles)
+            const chatSummaries = await getAllChatSummaries(user.id, 15);
+            const crossChatContext = formatChatSummariesForPrompt(chatSummaries, id);
+
+            // 2. Build compacted context from current chat + stored memories
             const compactedContext = await buildCompactedContext(
               user.id,
               messagesFromDb,
               { maxRecentMessages: 50, includeHistory: true }
             );
+            const currentChatContext = formatContextForPrompt(compactedContext);
 
-            // Format for injection into system prompt
-            memoryContext = formatContextForPrompt(compactedContext);
+            // Combine both contexts
+            memoryContext = crossChatContext + currentChatContext;
           } catch (memError) {
             console.error("Context building error (non-blocking):", memError);
             // Non-blocking - continue without memory context
@@ -257,7 +265,6 @@ export async function POST(request: Request) {
           experimental_activeTools: isReasoningModel
             ? []
             : [
-              "getWeather",
               "createDocument",
               "updateDocument",
               "requestSuggestions",
@@ -265,7 +272,6 @@ export async function POST(request: Request) {
           // No smoothStream - enable direct async streaming without buffering
           experimental_transform: undefined,
           tools: {
-            getWeather,
             createDocument: createDocument({
               session: { user: { id: user.id } } as any,
               dataStream
@@ -360,6 +366,23 @@ export async function POST(request: Request) {
               if (userSettings?.autoVanishEnabled && userSettings.autoVanishDays > 0) {
                 expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + userSettings.autoVanishDays);
+              }
+
+              // Get chat title for summary context
+              const currentChat = await getChatById({ id });
+              const chatTitle = currentChat?.title || "Untitled";
+
+              // Generate and save chat summary (for cross-chat references)
+              if (chatTitle !== "New chat" && conversationMessages.length >= 4) {
+                const summary = await summarizeChatWithTitle(chatTitle, conversationMessages);
+                if (summary && summary.length > 10) {
+                  await saveChatSummary({
+                    userId: user.id,
+                    chatId: id,
+                    summary,
+                    expiresAt,
+                  });
+                }
               }
 
               // Save compacted insights (summary + profile facts)

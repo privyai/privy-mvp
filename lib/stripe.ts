@@ -39,7 +39,9 @@ export async function createCheckoutSession({
 }): Promise<{ url: string }> {
     const session = await stripe.checkout.sessions.create({
         mode: "subscription",
-        payment_method_types: ["card"],
+        // Accept both card and stablecoin (USDC on Base, Polygon, Ethereum, Solana)
+        // Crypto requires enabling in Stripe Dashboard: Settings > Payments > Payment methods
+        payment_method_types: ["card", "crypto"],
         line_items: [
             {
                 price: PREMIUM_PRICE_ID,
@@ -61,14 +63,28 @@ export async function createCheckoutSession({
 }
 
 /**
- * Validate WEF promo code
- * Universal format: WEF2026PRIVY (case-insensitive)
+ * Promo codes with their trial durations
+ */
+const PROMO_CODES: Record<string, number> = {
+    "WEF2026PRIVY": 14, // 14-day trial
+    "WEF2026": 7,       // 7-day trial
+    "PRIVYLAUNCH": 3,   // 3-day trial
+};
+
+/**
+ * Validate promo code and return trial days (0 if invalid)
  */
 export function validatePromoCode(promoCode: string): boolean {
-    const validCodes = ["WEF2026PRIVY", "WEF2026", "PRIVYLAUNCH"];
-    return validCodes.some(
-        (code) => promoCode.toUpperCase().trim() === code.toUpperCase()
-    );
+    const normalizedCode = promoCode.toUpperCase().trim();
+    return normalizedCode in PROMO_CODES;
+}
+
+/**
+ * Get trial duration for a promo code (defaults to 7 days)
+ */
+export function getPromoCodeTrialDays(promoCode: string): number {
+    const normalizedCode = promoCode.toUpperCase().trim();
+    return PROMO_CODES[normalizedCode] || 7;
 }
 
 /**

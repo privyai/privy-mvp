@@ -1,7 +1,7 @@
 import { authenticateToken } from "@/lib/auth/token-auth";
 import { activateTrial, getUserPlan } from "@/lib/db/queries";
 import { ChatSDKError } from "@/lib/errors";
-import { validatePromoCode } from "@/lib/stripe";
+import { validatePromoCode, getPromoCodeTrialDays } from "@/lib/stripe";
 
 export async function POST(request: Request) {
     try {
@@ -41,14 +41,17 @@ export async function POST(request: Request) {
             ).toResponse();
         }
 
-        // Activate trial
-        const { trialEndsAt } = await activateTrial(user.id, promoCode);
+        // Get trial duration for this promo code
+        const trialDays = getPromoCodeTrialDays(promoCode);
+
+        // Activate trial with dynamic duration
+        const { trialEndsAt } = await activateTrial(user.id, promoCode, trialDays);
 
         return Response.json({
             success: true,
             plan: "trial",
             trialEndsAt: trialEndsAt.toISOString(),
-            message: "Trial activated! You have 7 days of premium access.",
+            message: `Trial activated! You have ${trialDays} days of premium access.`,
         });
     } catch (error) {
         console.error("Promo code error:", error);

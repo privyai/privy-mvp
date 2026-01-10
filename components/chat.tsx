@@ -195,6 +195,40 @@ export function Chat({
     setMessages,
   });
 
+  // Fetch and decrypt messages if initialMessages is empty
+  // This handles the case where server can't decrypt (no token access)
+  useEffect(() => {
+    if (initialMessages.length > 0) return; // Already have messages
+    if (messages.length > 0) return; // Already fetched
+
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(`/api/messages?chatId=${id}`, {
+          headers: {
+            'x-privy-token': localStorage.getItem('privy-token') || '',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.length > 0) {
+            setMessages(data);
+          }
+        } else if (response.status === 403) {
+          // Expected for chats belonging to other users - silently ignore
+          console.log('[Chat] Cannot access chat - may belong to another user');
+        } else {
+          console.warn('[Chat] Failed to fetch messages:', response.status);
+        }
+      } catch (error) {
+        // Network errors only
+        console.error('[Chat] Network error fetching messages:', error);
+      }
+    };
+
+    fetchMessages();
+  }, [id, initialMessages.length, messages.length, setMessages]);
+
   return (
     <>
       <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">

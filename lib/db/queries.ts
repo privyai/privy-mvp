@@ -19,6 +19,7 @@ import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatSDKError } from "../errors";
 import { generateUUID } from "../utils";
+import { withDBSpan } from "../observability/logfire";
 import { generateHashedPassword } from "./utils";
 import {
   generateEncryptionSalt,
@@ -78,64 +79,22 @@ export async function checkAndIncrementIPRateLimit(ipHash: string): Promise<{
   const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
   try {
-    // Use INSERT ON CONFLICT for atomic check-and-increment
-    const result = await db.transaction(async (tx) => {
-      const now = new Date();
+    return { count: updated.count, lastGeneratedAt: updated.lastGeneratedAt };
+  });
 
-      // Try to get existing record with FOR UPDATE lock
-      const [existing] = await tx
-        .select()
-        .from(ipRateLimit)
-        .where(eq(ipRateLimit.ipHash, ipHash))
-        .for("update");
-
-      if (!existing) {
-        // First time seeing this IP - create with count=1
-        const [inserted] = await tx
-          .insert(ipRateLimit)
-          .values({
-            ipHash,
-            count: 1,
-            lastGeneratedAt: now,
-          })
-          .returning();
-        return { count: inserted.count, lastGeneratedAt: inserted.lastGeneratedAt };
-      }
-
-      // Check if the window has expired
-      const isExpired = Date.now() - existing.lastGeneratedAt.getTime() > TWENTY_FOUR_HOURS_MS;
-
-      if (isExpired) {
-        // Reset to 1 (new 24h window)
-        const [reset] = await tx
-          .update(ipRateLimit)
-          .set({ count: 1, lastGeneratedAt: now })
-          .where(eq(ipRateLimit.ipHash, ipHash))
-          .returning();
-        return { count: reset.count, lastGeneratedAt: reset.lastGeneratedAt };
-      }
-
-      // Increment existing count
-      const [updated] = await tx
-        .update(ipRateLimit)
-        .set({ count: existing.count + 1 })
-        .where(eq(ipRateLimit.ipHash, ipHash))
-        .returning();
-      return { count: updated.count, lastGeneratedAt: updated.lastGeneratedAt };
-    });
-
-    return {
-      allowed: result.count <= LIMIT,
-      newCount: result.count,
-    };
+  return {
+    allowed: result.count <= LIMIT,
+    newCount: result.count,
+  };
+});
   } catch (error) {
-    // HARD FAILURE - Don't allow account creation if we can't track it
-    console.error("Failed to check/increment IP rate limit:", error);
-    throw new ChatSDKError(
-      "bad_request:database",
-      "Unable to verify rate limit. Please try again."
-    );
-  }
+  // HARD FAILURE - Don't allow account creation if we can't track it
+  console.error("Failed to check/increment IP rate limit:", error);
+  throw new ChatSDKError(
+    "bad_request:database",
+    "Unable to verify rate limit. Please try again."
+  );
+}
 }
 
 // ============================================
@@ -145,10 +104,12 @@ export async function getUserByTokenHash(
   tokenHash: string
 ): Promise<User | null> {
   try {
-    const users = await db
-      .select()
-      .from(user)
-      .where(eq(user.tokenHash, tokenHash));
+    const users = await withDBSpan('user.get_by_token', { table: 'user', queryType: 'select' }, () =>
+      db
+        .select()
+        .from(user)
+        .where(eq(user.tokenHash, tokenHash))
+    );
     return users[0] || null;
   } catch (_error) {
     throw new ChatSDKError(
@@ -163,14 +124,16 @@ export async function getUserByTokenHash(
  */
 export async function createTokenUser(tokenHash: string): Promise<User> {
   try {
-    const [newUser] = await db
-      .insert(user)
-      .values({
-        tokenHash,
-        createdAt: new Date(),
-        lastActiveAt: new Date(),
-      })
-      .returning();
+    const [newUser] = await withDBSpan('user.create', { table: 'user', queryType: 'insert' }, () =>
+      db
+        .insert(user)
+        .values({
+          tokenHash,
+          createdAt: new Date(),
+          lastActiveAt: new Date(),
+        })
+        .returning()
+    );
 
     return newUser;
   } catch (_error) {
@@ -297,15 +260,16 @@ export async function isPremiumUser(userId: string): Promise<boolean> {
 
 /**
  * Activate trial for user with promo code
- * Trial lasts 7 days
+ * Trial duration is configurable (default 7 days)
  */
 export async function activateTrial(
   userId: string,
-  promoCode: string
+  promoCode: string,
+  trialDays: number = 7
 ): Promise<{ success: boolean; trialEndsAt: Date }> {
   try {
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 7); // 7-day trial
+    trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 
     await db
       .update(user)
@@ -1324,6 +1288,113 @@ export async function deleteUserMemories(userId: string): Promise<void> {
       "bad_request:database",
       "Failed to delete user memories"
     );
+  }
+}
+
+/**
+ * Chat summary for cross-chat context
+ */
+export interface ChatSummary {
+  chatId: string;
+  title: string;
+  summary: string | null;
+  createdAt: Date;
+}
+
+/**
+ * Get all chat summaries for a user (for cross-chat context)
+ * Returns chat titles + their summaries from GlobalMemory
+ */
+export async function getAllChatSummaries(
+  userId: string,
+  limit = 20
+): Promise<ChatSummary[]> {
+  try {
+    // Get all chats for the user with their titles
+    const chats = await db
+      .select({
+        id: chat.id,
+        title: chat.title,
+        createdAt: chat.createdAt,
+      })
+      .from(chat)
+      .where(eq(chat.userId, userId))
+      .orderBy(desc(chat.createdAt))
+      .limit(limit);
+
+    if (chats.length === 0) return [];
+
+    // Get summaries for these chats from GlobalMemory
+    const chatIds = chats.map((c) => c.id);
+    const summaries = await db
+      .select({
+        chatId: globalMemory.chatId,
+        content: globalMemory.content,
+      })
+      .from(globalMemory)
+      .where(
+        and(
+          eq(globalMemory.userId, userId),
+          eq(globalMemory.contentType, "chat_summary"),
+          inArray(globalMemory.chatId, chatIds)
+        )
+      );
+
+    // Create a map for quick lookup
+    const summaryMap = new Map(
+      summaries.map((s) => [s.chatId, s.content])
+    );
+
+    // Combine chats with their summaries
+    return chats.map((c) => ({
+      chatId: c.id,
+      title: c.title,
+      summary: summaryMap.get(c.id) || null,
+      createdAt: c.createdAt,
+    }));
+  } catch (error) {
+    console.error("[getAllChatSummaries] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Save or update chat summary
+ */
+export async function saveChatSummary({
+  userId,
+  chatId,
+  summary,
+  expiresAt,
+}: {
+  userId: string;
+  chatId: string;
+  summary: string;
+  expiresAt?: Date;
+}): Promise<void> {
+  try {
+    // Delete existing summary for this chat (if any)
+    await db
+      .delete(globalMemory)
+      .where(
+        and(
+          eq(globalMemory.userId, userId),
+          eq(globalMemory.chatId, chatId),
+          eq(globalMemory.contentType, "chat_summary")
+        )
+      );
+
+    // Insert new summary
+    await db.insert(globalMemory).values({
+      userId,
+      chatId,
+      content: summary,
+      contentType: "chat_summary",
+      expiresAt,
+    });
+  } catch (error) {
+    console.error("[saveChatSummary] Error:", error);
+    // Non-blocking
   }
 }
 

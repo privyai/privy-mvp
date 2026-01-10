@@ -131,6 +131,81 @@ ${context.historySummary}
 }
 
 /**
+ * Format all chat summaries for cross-chat context injection
+ * Creates a list of chats the AI can reference explicitly
+ */
+export function formatChatSummariesForPrompt(
+  chatSummaries: Array<{ chatId: string; title: string; summary: string | null; createdAt: Date }>,
+  currentChatId: string
+): string {
+  // Filter out current chat and chats with no useful title
+  const otherChats = chatSummaries.filter(
+    (c) => c.chatId !== currentChatId && c.title && c.title !== "New chat"
+  );
+
+  if (otherChats.length === 0) {
+    return "";
+  }
+
+  // Format each chat with relative time
+  const now = new Date();
+  const chatLines = otherChats.slice(0, 10).map((c) => {
+    const daysAgo = Math.floor((now.getTime() - c.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const timeLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
+    const summaryPart = c.summary ? `: ${c.summary}` : "";
+    return `- **${c.title}** (${timeLabel})${summaryPart}`;
+  }).join("\n");
+
+  return `
+
+[USER'S CONVERSATION HISTORY]
+You have access to context from the user's other conversations:
+
+${chatLines}
+
+When relevant, you can reference these by saying "In your chat about [Title]..." or "You mentioned before..."
+Be natural about it - only reference when directly relevant to what they're asking.
+[END CONVERSATION HISTORY]
+
+`;
+}
+
+/**
+ * Generate a chat summary with the title included
+ * Format: "User is working on X, discussed Y, main themes: Z"
+ */
+export async function summarizeChatWithTitle(
+  chatTitle: string,
+  messages: ContextMessage[]
+): Promise<string> {
+  if (messages.length < 2) {
+    return "";
+  }
+
+  try {
+    // Format messages for summarization
+    const conversationText = messages
+      .slice(-20) // Last 20 messages
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n")
+      .slice(0, 3000);
+
+    const systemPrompt = `Summarize this conversation in ONE concise sentence (max 100 chars).
+Focus on: what the user is working through or discussing.
+Do NOT include the chat title in the summary - it will be added separately.
+Example: "Deciding between two job offers, values work-life balance"
+Example: "Frustrated with boss, considering leaving job"
+Example: "Planning a difficult conversation with partner"`;
+
+    const summary = await generateWithFireworks(systemPrompt, conversationText, 100);
+    return summary.replace(/^["']|["']$/g, "").trim(); // Remove quotes if any
+  } catch (error) {
+    console.error("[summarizeChatWithTitle] Failed:", error);
+    return "";
+  }
+}
+
+/**
  * Call Fireworks API for text generation
  */
 async function generateWithFireworks(

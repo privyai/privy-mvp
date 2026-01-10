@@ -5,8 +5,7 @@ import { Suspense } from "react";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
-import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
-import { convertToUIMessages } from "@/lib/utils";
+import { getChatById } from "@/lib/db/queries";
 
 export default function Page(props: { params: Promise<{ id: string }> }) {
   return (
@@ -28,18 +27,16 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   // API calls include the token via x-privy-token header
   // Permission checks happen when user makes API calls
 
-  const messagesFromDb = await getMessagesByChatId({
-    id,
-  });
-
-  const uiMessages = convertToUIMessages(messagesFromDb);
+  // Messages are loaded client-side via API to support decryption
+  // The API route has access to the token and can decrypt properly
 
   const cookieStore = await cookies();
   const chatModelFromCookie = cookieStore.get("chat-model");
 
   // For private chats, the API routes will validate ownership
   // when the user tries to interact (send messages, etc.)
-  const isReadonly = chat.visibility === "private";
+  // Users can always chat in their own conversations
+  const isReadonly = false;
 
   if (!chatModelFromCookie) {
     return (
@@ -48,7 +45,7 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
           autoResume={true}
           id={chat.id}
           initialChatModel={DEFAULT_CHAT_MODEL}
-          initialMessages={uiMessages}
+          initialMessages={[]}
           initialVisibilityType={chat.visibility}
           isReadonly={isReadonly}
         />
@@ -63,7 +60,7 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
         autoResume={true}
         id={chat.id}
         initialChatModel={chatModelFromCookie.value}
-        initialMessages={uiMessages}
+        initialMessages={[]}
         initialVisibilityType={chat.visibility}
         isReadonly={isReadonly}
       />
@@ -71,3 +68,4 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
     </>
   );
 }
+

@@ -189,13 +189,29 @@ export function safeDecryptParts(
   key: Buffer | null
 ): unknown[] {
   // If it's an encrypted payload and we have a key, decrypt
-  if (isEncryptedPayload(parts) && key) {
+  if (isEncryptedPayload(parts)) {
+    if (!key) {
+      console.error("[DECRYPTION ERROR] Encrypted message found but no key provided", {
+        hasIv: !!parts.iv,
+        hasData: !!parts.data,
+        hasTag: !!parts.tag,
+        version: parts.v,
+      });
+      return [{ type: "text", text: "[Message encrypted - key unavailable]" }];
+    }
+
     try {
-      return decryptMessageParts(parts, key);
+      const decrypted = decryptMessageParts(parts, key);
+      return decrypted;
     } catch (error) {
-      console.error("Failed to decrypt message parts:", error);
-      // Return empty array on decryption failure (data is lost)
-      return [];
+      console.error("[DECRYPTION ERROR] Failed to decrypt message parts", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        payloadVersion: parts.v,
+        ivLength: parts.iv?.length,
+        dataLength: parts.data?.length,
+      });
+      return [{ type: "text", text: "[Message decryption failed]" }];
     }
   }
 
@@ -204,9 +220,13 @@ export function safeDecryptParts(
     return parts;
   }
 
-  // Unknown format
-  console.warn("Unknown message parts format:", typeof parts);
-  return [];
+  // Unknown format - log details
+  console.error("[DECRYPTION ERROR] Unknown message parts format", {
+    type: typeof parts,
+    isObject: parts !== null && typeof parts === "object",
+    keys: parts !== null && typeof parts === "object" ? Object.keys(parts as object) : [],
+  });
+  return [{ type: "text", text: "[Message format unrecognized]" }];
 }
 
 /**
