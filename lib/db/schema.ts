@@ -22,7 +22,7 @@ export const user = pgTable("User", {
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   lastActiveAt: timestamp("lastActiveAt"),
   // Subscription fields
-  plan: varchar("plan", { length: 16 }).default("free"),
+  plan: varchar("plan", { length: 32 }).default("free"),
   stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
   trialEndsAt: timestamp("trialEndsAt"),
   promoCode: varchar("promoCode", { length: 32 }),

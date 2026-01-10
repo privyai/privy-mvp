@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { MixpanelProvider } from "@/components/providers/mixpanel-provider";
+import { LogfireProvider } from "@/components/providers/logfire-provider";
 
 import "./globals.css";
 
@@ -75,10 +75,10 @@ export default function RootLayout({
           disableTransitionOnChange
           enableSystem
         >
-          <MixpanelProvider>
+          <LogfireProvider>
             <Toaster position="top-center" />
             {children}
-          </MixpanelProvider>
+          </LogfireProvider>
         </ThemeProvider>
       </body>
     </html>
